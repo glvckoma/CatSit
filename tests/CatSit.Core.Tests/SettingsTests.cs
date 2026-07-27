@@ -98,4 +98,83 @@ public class SettingsSerializerTests
         Assert.Equal(0x4C, restored.ToggleHotkey.Vk);
         Assert.Equal(HotkeyModifiers.Ctrl | HotkeyModifiers.Alt, restored.ToggleHotkey.Modifiers);
     }
+
+    [Fact]
+    public void RoundTrip_PreservesV2Options()
+    {
+        var settings = new AppSettings
+        {
+            WarnOnly = true,
+            PauseInFullscreen = false,
+            ShowTrayAlerts = false,
+            LearningEnabled = false,
+            AutoUnlockMinutes = 15,
+            Volume = 40,
+            LockSound = CatSit.Core.Audio.LockSound.Thud,
+            CatSound = CatSit.Core.Audio.CatSound.Trill,
+            DeterrentSound = CatSit.Core.Audio.DeterrentSound.Hiss,
+            CustomCatSoundPath = @"C:\sounds\mycat.wav",
+            Breed = CatSit.Core.Sprites.CatBreed.Tuxedo,
+            UseCustomFur = true,
+            CustomFurColor = 0xFF123456,
+            CatScale = 6,
+            EntryEdge = EntryEdge.Left,
+            ShowZzz = false,
+            ClickToDismiss = false,
+            ExcludedSignatures = ["W+D", "A+S"]
+        };
+        var restored = SettingsSerializer.FromJson(SettingsSerializer.ToJson(settings));
+        Assert.True(restored.WarnOnly);
+        Assert.False(restored.PauseInFullscreen);
+        Assert.False(restored.ShowTrayAlerts);
+        Assert.False(restored.LearningEnabled);
+        Assert.Equal(15, restored.AutoUnlockMinutes);
+        Assert.Equal(40, restored.Volume);
+        Assert.Equal(CatSit.Core.Audio.LockSound.Thud, restored.LockSound);
+        Assert.Equal(CatSit.Core.Audio.CatSound.Trill, restored.CatSound);
+        Assert.Equal(CatSit.Core.Audio.DeterrentSound.Hiss, restored.DeterrentSound);
+        Assert.Equal(@"C:\sounds\mycat.wav", restored.CustomCatSoundPath);
+        Assert.Equal(CatSit.Core.Sprites.CatBreed.Tuxedo, restored.Breed);
+        Assert.True(restored.UseCustomFur);
+        Assert.Equal(0xFF123456u, restored.CustomFurColor);
+        Assert.Equal(6, restored.CatScale);
+        Assert.Equal(EntryEdge.Left, restored.EntryEdge);
+        Assert.False(restored.ShowZzz);
+        Assert.False(restored.ClickToDismiss);
+        Assert.Equal(2, restored.ExcludedSignatures.Count);
+    }
+
+    [Fact]
+    public void FromJson_ClampsV2RangesAndKeepsAtLeastOneLockTarget()
+    {
+        var restored = SettingsSerializer.FromJson(
+            "{\"Volume\":900,\"CatScale\":99,\"AutoUnlockMinutes\":-4,\"LockKeyboard\":false,\"LockMouse\":false}");
+        Assert.Equal(100, restored.Volume);
+        Assert.Equal(8, restored.CatScale);
+        Assert.Equal(0, restored.AutoUnlockMinutes);
+        Assert.True(restored.LockKeyboard);
+    }
+
+    [Fact]
+    public void FromJson_V1FileStillLoadsWithNewDefaults()
+    {
+        var restored = SettingsSerializer.FromJson(
+            "{\"LockKeyboard\":true,\"Sensitivity\":7,\"SecondsUntilSleep\":20,\"SoundsEnabled\":true}");
+        Assert.Equal(7, restored.Sensitivity);
+        Assert.Equal(20, restored.SecondsUntilSleep);
+        Assert.Equal(CatSit.Core.Sprites.CatBreed.OrangeTabby, restored.Breed);
+        Assert.True(restored.PauseInFullscreen);
+        Assert.Equal(70, restored.Volume);
+        Assert.Empty(restored.ExcludedSignatures);
+    }
+
+    [Fact]
+    public void Theme_FollowsBreedOrCustomFur()
+    {
+        var settings = new AppSettings { Breed = CatSit.Core.Sprites.CatBreed.Black };
+        Assert.Equal(CatSit.Core.Sprites.CatTheme.FromBreed(CatSit.Core.Sprites.CatBreed.Black), settings.Theme());
+        settings.UseCustomFur = true;
+        settings.CustomFurColor = 0xFF4C8BF5;
+        Assert.Equal(0xFF4C8BF5u, settings.Theme().Fur);
+    }
 }

@@ -2,6 +2,8 @@ namespace CatSit.Core.Detection;
 
 public sealed class MouseCatDetector
 {
+    private const int ClickWindowMs = 1000;
+
     private readonly SensitivityProfile _profile;
     private readonly List<long> _clickTimes = [];
     private readonly HashSet<MouseButton> _held = [];
@@ -11,19 +13,27 @@ public sealed class MouseCatDetector
         _profile = profile;
     }
 
-    public bool Observe(MouseEventInfo e)
+    public CatSignal? Observe(MouseEventInfo e)
     {
-        if (e.Injected) return false;
+        if (e.Injected) return null;
         if (!e.IsDown)
         {
             _held.Remove(e.Button);
-            return false;
+            return null;
         }
         _held.Add(e.Button);
-        if (_profile.BothButtonsTriggers && _held.Contains(MouseButton.Left) && _held.Contains(MouseButton.Right)) return true;
+        var bothHeld = _held.Contains(MouseButton.Left) && _held.Contains(MouseButton.Right);
+        if (_profile.BothButtonsTriggers && bothHeld)
+        {
+            return new CatSignal(CatRule.BothButtons, [], Features(bothHeld));
+        }
         _clickTimes.Add(e.TimestampMs);
-        _clickTimes.RemoveAll(t => e.TimestampMs - t > 1000);
-        return _clickTimes.Count >= _profile.ClickBurstCount;
+        _clickTimes.RemoveAll(t => e.TimestampMs - t > ClickWindowMs);
+        if (_clickTimes.Count >= _profile.ClickBurstCount)
+        {
+            return new CatSignal(CatRule.ClickBurst, [], Features(bothHeld));
+        }
+        return null;
     }
 
     public void Reset()
@@ -31,4 +41,10 @@ public sealed class MouseCatDetector
         _clickTimes.Clear();
         _held.Clear();
     }
+
+    private DetectionFeatures Features(bool bothHeld) => new()
+    {
+        ClicksPerSecond = _clickTimes.Count * 1000.0 / ClickWindowMs,
+        BothButtonsHeld = bothHeld
+    };
 }
