@@ -8,4 +8,17 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
     }
+
+    protected override void OnStateChanged(EventArgs e)
+    {
+        base.OnStateChanged(e);
+        if (WindowState == WindowState.Minimized) Hide();
+    }
+
+    public void ShowFromTray()
+    {
+        Show();
+        WindowState = WindowState.Normal;
+        Activate();
+    }
 }
