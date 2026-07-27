@@ -57,13 +57,31 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public bool LockKeyboard
     {
         get => Settings.LockKeyboard;
-        set { Settings.LockKeyboard = value; SaveAndRaise(); }
+        set
+        {
+            if (!value && !Settings.LockMouse)
+            {
+                OnPropertyChanged();
+                return;
+            }
+            Settings.LockKeyboard = value;
+            SaveAndRaise();
+        }
     }
 
     public bool LockMouse
     {
         get => Settings.LockMouse;
-        set { Settings.LockMouse = value; SaveAndRaise(); }
+        set
+        {
+            if (!value && !Settings.LockKeyboard)
+            {
+                OnPropertyChanged();
+                return;
+            }
+            Settings.LockMouse = value;
+            SaveAndRaise();
+        }
     }
 
     public bool DetectionEnabled

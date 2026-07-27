@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using System.Windows.Threading;
 using CatSit.Core.Detection;
 using CatSit.Core.Hotkeys;
+using CatSit.Core.Settings;
 
 namespace CatSit.Interop;
 
@@ -15,6 +16,10 @@ public sealed class InputHookManager : IDisposable
     private IntPtr _mouseHook;
     private volatile bool _blockKeyboard;
     private volatile bool _blockMouse;
+    private volatile bool _hotkeyLocksKeyboard;
+    private volatile bool _hotkeyLocksMouse;
+    private volatile HotkeyCombo? _toggleHotkey;
+    private bool _hotkeyTriggerDown;
     private bool _started;
     private int _modifierState;
 
@@ -25,6 +30,7 @@ public sealed class InputHookManager : IDisposable
 
     public event Action<KeyEventInfo>? KeyEvent;
     public event Action<MouseEventInfo>? MouseEvent;
+    public event Action<bool>? HotkeyToggled;
 
     public bool BlockKeyboard
     {
@@ -36,6 +42,24 @@ public sealed class InputHookManager : IDisposable
     {
         get => _blockMouse;
         set => _blockMouse = value;
+    }
+
+    public bool HotkeyLocksKeyboard
+    {
+        get => _hotkeyLocksKeyboard;
+        set => _hotkeyLocksKeyboard = value;
+    }
+
+    public bool HotkeyLocksMouse
+    {
+        get => _hotkeyLocksMouse;
+        set => _hotkeyLocksMouse = value;
+    }
+
+    public HotkeyCombo? ToggleHotkey
+    {
+        get => _toggleHotkey;
+        set => _toggleHotkey = value;
     }
 
     public void Start()
@@ -81,6 +105,27 @@ public sealed class InputHookManager : IDisposable
         var vk = (int)data.vkCode;
         var injected = (data.flags & NativeMethods.LLKHF_INJECTED) != 0;
         if (!injected) _modifierState = ModifierTracker.Update(_modifierState, vk, isDown);
+        var hotkey = _toggleHotkey;
+        if (hotkey is not null && !injected && vk == hotkey.Vk)
+        {
+            if (isDown)
+            {
+                if (_hotkeyTriggerDown) return (IntPtr)1;
+                if (HotkeyMatcher.Matches(hotkey, _modifierState, vk))
+                {
+                    _hotkeyTriggerDown = true;
+                    var nowLocked = ToggleLockOnHookThread();
+                    var toggled = HotkeyToggled;
+                    if (toggled is not null) _appDispatcher.BeginInvoke(toggled, nowLocked);
+                    return (IntPtr)1;
+                }
+            }
+            else if (_hotkeyTriggerDown)
+            {
+                _hotkeyTriggerDown = false;
+                return (IntPtr)1;
+            }
+        }
         var handler = KeyEvent;
         if (handler is not null)
         {
@@ -89,6 +134,19 @@ public sealed class InputHookManager : IDisposable
         }
         if (_blockKeyboard && !injected) return (IntPtr)1;
         return NativeMethods.CallNextHookEx(IntPtr.Zero, nCode, wParam, lParam);
+    }
+
+    private bool ToggleLockOnHookThread()
+    {
+        if (_blockKeyboard || _blockMouse)
+        {
+            _blockKeyboard = false;
+            _blockMouse = false;
+            return false;
+        }
+        _blockKeyboard = _hotkeyLocksKeyboard;
+        _blockMouse = _hotkeyLocksMouse;
+        return _blockKeyboard || _blockMouse;
     }
 
     private IntPtr MouseCallback(int nCode, IntPtr wParam, IntPtr lParam)

@@ -1,5 +1,7 @@
 using System.Windows;
+using CatSit.Audio;
 using CatSit.Interop;
+using CatSit.Locking;
 using CatSit.Settings;
 using CatSit.UI;
 
@@ -8,6 +10,8 @@ namespace CatSit;
 public partial class App : Application
 {
     private InputHookManager? _hooks;
+    private AudioService? _audio;
+    private LockController? _lockController;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -15,9 +19,13 @@ public partial class App : Application
         var store = new SettingsStore();
         var settings = store.Load();
         var viewModel = new MainViewModel(store, settings);
-        viewModel.ToggleRequested += () => viewModel.IsLocked = !viewModel.IsLocked;
+        _audio = new AudioService(settings);
         _hooks = new InputHookManager(Dispatcher);
         _hooks.Start();
+        _lockController = new LockController(_hooks, settings, _audio);
+        viewModel.ToggleRequested += _lockController.Toggle;
+        viewModel.SettingsChanged += _lockController.ApplySettings;
+        _lockController.StateChanged += (locked, _) => viewModel.IsLocked = locked;
 #if DEBUG
         _hooks.KeyEvent += k =>
             viewModel.LastInputDebug = $"key {(k.IsDown ? "down" : "up  ")} vk=0x{k.Vk:X2}{(k.Injected ? " inj" : "")}{(k.CtrlOrAltHeld ? " mod" : "")}";
@@ -31,7 +39,9 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _lockController?.Unlock(LockReason.Manual);
         _hooks?.Dispose();
+        _audio?.Dispose();
         base.OnExit(e);
     }
 }
