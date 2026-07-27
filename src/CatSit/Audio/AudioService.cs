@@ -9,11 +9,13 @@ public sealed class AudioService : IDisposable
 {
     private readonly AppSettings _settings;
     private readonly SoundPlayer _lockPlayer;
+    private readonly SoundPlayer _meowPlayer;
 
     public AudioService(AppSettings settings)
     {
         _settings = settings;
         _lockPlayer = CreatePlayer(WavSynthesizer.LockChime());
+        _meowPlayer = CreatePlayer(WavSynthesizer.Meow());
     }
 
     public void PlayLock()
@@ -21,7 +23,16 @@ public sealed class AudioService : IDisposable
         if (_settings.SoundsEnabled) _lockPlayer.Play();
     }
 
-    public void Dispose() => _lockPlayer.Dispose();
+    public void PlayMeow()
+    {
+        if (_settings.SoundsEnabled) _meowPlayer.Play();
+    }
+
+    public void Dispose()
+    {
+        _lockPlayer.Dispose();
+        _meowPlayer.Dispose();
+    }
 
     private static SoundPlayer CreatePlayer(byte[] wav)
     {

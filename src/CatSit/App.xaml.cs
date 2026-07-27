@@ -2,6 +2,7 @@ using System.Windows;
 using CatSit.Audio;
 using CatSit.Interop;
 using CatSit.Locking;
+using CatSit.Overlay;
 using CatSit.Settings;
 using CatSit.UI;
 
@@ -12,6 +13,7 @@ public partial class App : Application
     private InputHookManager? _hooks;
     private AudioService? _audio;
     private LockController? _lockController;
+    private OverlayWindow? _overlay;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -23,9 +25,23 @@ public partial class App : Application
         _hooks = new InputHookManager(Dispatcher);
         _hooks.Start();
         _lockController = new LockController(_hooks, settings, _audio);
+        _overlay = new OverlayWindow(new SpriteBitmapCache());
         viewModel.ToggleRequested += _lockController.Toggle;
         viewModel.SettingsChanged += _lockController.ApplySettings;
-        _lockController.StateChanged += (locked, _) => viewModel.IsLocked = locked;
+        var audio = _audio;
+        var controller = _lockController;
+        var overlay = _overlay;
+        controller.StateChanged += (locked, _) =>
+        {
+            viewModel.IsLocked = locked;
+            if (locked) overlay.ShowCat(settings.SecondsUntilSleep, settings.ToggleHotkey.ToString());
+            else overlay.WakeAndDismiss();
+        };
+        overlay.CatClicked += () =>
+        {
+            audio.PlayMeow();
+            controller.Unlock(LockReason.CatClicked);
+        };
 #if DEBUG
         _hooks.KeyEvent += k =>
             viewModel.LastInputDebug = $"key {(k.IsDown ? "down" : "up  ")} vk=0x{k.Vk:X2}{(k.Injected ? " inj" : "")}{(k.CtrlOrAltHeld ? " mod" : "")}";

@@ -52,6 +52,36 @@ public class WavSynthesizerTests
     }
 
     [Fact]
+    public void Meow_HasValidHeaderAndDurationNear600Ms()
+    {
+        var wav = WavSynthesizer.Meow();
+        Assert.Equal("RIFF", System.Text.Encoding.ASCII.GetString(wav, 0, 4));
+        Assert.Equal("WAVE", System.Text.Encoding.ASCII.GetString(wav, 8, 4));
+        var sampleCount = (wav.Length - 44) / 2;
+        Assert.InRange(sampleCount, (int)(0.5 * WavSynthesizer.SampleRate), (int)(0.7 * WavSynthesizer.SampleRate));
+    }
+
+    [Fact]
+    public void Meow_StaysUnderCapAndIsAudible()
+    {
+        var wav = WavSynthesizer.Meow();
+        var peak = 0;
+        for (var i = 44; i < wav.Length; i += 2)
+        {
+            var sample = Math.Abs((int)BitConverter.ToInt16(wav, i));
+            Assert.True(sample <= 19662);
+            peak = Math.Max(peak, sample);
+        }
+        Assert.True(peak > 8000);
+    }
+
+    [Fact]
+    public void Meow_IsDeterministic()
+    {
+        Assert.Equal(WavSynthesizer.Meow(), WavSynthesizer.Meow());
+    }
+
+    [Fact]
     public void LockChime_ProducesAudibleSignal()
     {
         var wav = WavSynthesizer.LockChime();
