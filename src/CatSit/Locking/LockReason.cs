@@ -5,5 +5,6 @@ public enum LockReason
     Manual,
     Hotkey,
     CatDetected,
-    CatClicked
+    CatClicked,
+    AutoTimeout
 }

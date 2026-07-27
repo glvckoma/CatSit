@@ -9,6 +9,8 @@ public partial class MainWindow : Window
         InitializeComponent();
     }
 
+    public event Action<string?>? SettingsRequested;
+
     protected override void OnStateChanged(EventArgs e)
     {
         base.OnStateChanged(e);
@@ -21,4 +23,8 @@ public partial class MainWindow : Window
         WindowState = WindowState.Normal;
         Activate();
     }
+
+    private void OnSettingsClicked(object sender, RoutedEventArgs e) => SettingsRequested?.Invoke(null);
+
+    private void OnActivityClicked(object sender, RoutedEventArgs e) => SettingsRequested?.Invoke("Activity");
 }

@@ -1,5 +1,7 @@
 using System.Windows;
 using CatSit.Audio;
+using CatSit.Core.Detection;
+using CatSit.Core.Learning;
 using CatSit.Interop;
 using CatSit.Locking;
 using CatSit.Overlay;
@@ -20,6 +22,10 @@ public partial class App : Application
     private LockController? _lockController;
     private OverlayWindow? _overlay;
     private TrayIconService? _tray;
+    private SettingsWindow? _settingsWindow;
+    private ActivityStore? _activityStore;
+    private TriggerLog? _log;
+    private CatClassifier? _classifier;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -31,45 +37,85 @@ public partial class App : Application
             Shutdown();
             return;
         }
+
         var store = new SettingsStore();
         var settings = store.Load();
-        var viewModel = new MainViewModel(store, settings);
+        _activityStore = new ActivityStore();
+        var activity = _activityStore.Load();
+        _log = new TriggerLog();
+        _log.Load(activity.Triggers);
+        _classifier = new CatClassifier();
+        _classifier.Load(activity.Weights, activity.Bias, activity.Samples);
+        var exclusions = new ExclusionList();
+        exclusions.Load(settings.ExcludedSignatures);
+
         _audio = new AudioService(settings);
+        var sprites = new SpriteBitmapCache();
+        sprites.Rebuild(settings.Theme());
         _hooks = new InputHookManager(Dispatcher);
         _hooks.Start();
-        _lockController = new LockController(_hooks, settings, _audio);
-        var cache = new SpriteBitmapCache();
-        _overlay = new OverlayWindow(cache);
+        _lockController = new LockController(_hooks, settings, _audio, _log, _classifier, exclusions);
+        _overlay = new OverlayWindow(sprites, settings);
         _tray = new TrayIconService();
+
+        var viewModel = new MainViewModel(store, settings, sprites, _audio, _log, exclusions, _classifier);
         var window = new MainWindow { DataContext = viewModel };
-        var audio = _audio;
         var controller = _lockController;
         var overlay = _overlay;
         var tray = _tray;
+        var audio = _audio;
+        var activityStore = _activityStore;
+        var log = _log;
+        var classifier = _classifier;
+
         viewModel.ToggleRequested += controller.Toggle;
-        viewModel.SettingsChanged += controller.ApplySettings;
-        controller.StateChanged += (locked, _) =>
+        viewModel.SettingsChanged += () =>
+        {
+            controller.ApplySettings();
+            overlay.RefreshAppearance();
+        };
+        viewModel.AppearanceChanged += overlay.RefreshAppearance;
+        viewModel.VerdictReported += (id, verdict) =>
+        {
+            controller.ReportVerdict(id, verdict);
+            store.Save(settings);
+            activityStore.Save(log, classifier);
+        };
+        viewModel.ActivityCleared += () => activityStore.Save(log, classifier);
+
+        controller.StateChanged += (locked, reason) =>
         {
             viewModel.IsLocked = locked;
             tray.SetLocked(locked);
-            if (locked) overlay.ShowCat(settings.SecondsUntilSleep, settings.ToggleHotkey.ToString());
+            if (locked) overlay.ShowCat(settings.ToggleHotkey.ToString());
             else overlay.WakeAndDismiss();
+            if (locked && reason == LockReason.CatDetected && settings.ShowTrayAlerts)
+            {
+                tray.Notify("Cat detected", "Input is locked until you unlock it.");
+            }
         };
+        controller.TriggerRecorded += record =>
+        {
+            activityStore.Save(log, classifier);
+            viewModel.RefreshActivity();
+            if (!record.Locked && settings.ShowTrayAlerts)
+            {
+                tray.Notify("Cat detected", "Warn-only mode, input is still active.");
+            }
+        };
+
         overlay.CatClicked += () =>
         {
-            audio.PlayMeow();
+            audio.PlayCat();
             controller.Unlock(LockReason.CatClicked);
         };
+
+        window.SettingsRequested += section => ShowSettings(viewModel, window, section);
         tray.ToggleRequested += controller.Toggle;
         tray.OpenRequested += window.ShowFromTray;
         tray.ExitRequested += Shutdown;
-#if DEBUG
-        _hooks.KeyEvent += k =>
-            viewModel.LastInputDebug = $"key {(k.IsDown ? "down" : "up  ")} vk=0x{k.Vk:X2}{(k.Injected ? " inj" : "")}{(k.CtrlOrAltHeld ? " mod" : "")}";
-        _hooks.MouseEvent += m =>
-            viewModel.LastInputDebug = $"mouse {m.Button} {(m.IsDown ? "down" : "up")}{(m.Injected ? " inj" : "")}";
-#endif
-        window.Icon = cache.Get(Core.Animation.CatState.Sitting, 0, false);
+
+        window.Icon = sprites.Get(Core.Animation.CatState.Sitting, 0, false);
         MainWindow = window;
         StartShowEventListener();
         window.Show();
@@ -78,12 +124,32 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         _lockController?.Unlock(LockReason.Manual);
+        if (_activityStore is not null && _log is not null && _classifier is not null)
+        {
+            _activityStore.Save(_log, _classifier);
+        }
         _tray?.Dispose();
         _hooks?.Dispose();
         _audio?.Dispose();
         _instanceMutex?.Dispose();
         _showEvent?.Dispose();
         base.OnExit(e);
+    }
+
+    private void ShowSettings(MainViewModel viewModel, Window owner, string? section)
+    {
+        if (_settingsWindow is null)
+        {
+            _settingsWindow = new SettingsWindow(viewModel) { Owner = owner };
+            _settingsWindow.Closed += (_, _) => _settingsWindow = null;
+            _settingsWindow.Show();
+        }
+        else
+        {
+            _settingsWindow.Activate();
+        }
+        viewModel.RefreshActivity();
+        _settingsWindow.ShowSection(section);
     }
 
     private void StartShowEventListener()

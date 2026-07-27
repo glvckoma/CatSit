@@ -23,12 +23,14 @@
                 HorizontalAlignment="Center"
                 VerticalAlignment="Top"
                 Margin="0,80,0,0"
-                Background="#D9332B22"
-                CornerRadius="10"
-                Padding="16,8"
+                Background="#E61A1D27"
+                BorderBrush="#556FD3B8"
+                BorderThickness="1"
+                CornerRadius="12"
+                Padding="18,9"
                 IsHitTestVisible="False">
             <TextBlock x:Name="HintText"
-                       Foreground="#FDF6E3"
+                       Foreground="#E8EDF5"
                        FontSize="16"
                        FontWeight="SemiBold" />
         </Border>

@@ -3,152 +3,112 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="clr-namespace:CatSit.UI"
         Title="CatSit"
-        Width="420"
+        Width="400"
         SizeToContent="Height"
         ResizeMode="CanMinimize"
-        Background="#FDF6E3">
-    <StackPanel Margin="28,20,28,24">
-        <TextBlock Text="CatSit"
-                   FontSize="30"
-                   FontWeight="Bold"
-                   Foreground="#4A3B2A"
-                   HorizontalAlignment="Center" />
-        <TextBlock Text="Ready when you are."
-                   FontSize="15"
-                   Foreground="#8A785F"
-                   HorizontalAlignment="Center"
-                   Margin="0,2,0,14" />
+        Background="{StaticResource Backdrop}">
+    <Border Padding="22,18,22,22">
+        <StackPanel>
+            <Grid Margin="0,0,0,18">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="34" Height="34" CornerRadius="10" Background="{StaticResource AccentSoft}">
+                        <ui:IconPath Geometry="{StaticResource IconCat}"
+                                     Foreground="{StaticResource Accent}"
+                                     Size="20"
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel Margin="11,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="CatSit" FontSize="19" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding ModeSummary}" Style="{StaticResource Caption}" />
+                    </StackPanel>
+                </StackPanel>
+                <Button Style="{StaticResource IconButton}"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        ToolTip="Settings"
+                        Click="OnSettingsClicked">
+                    <ui:IconPath Geometry="{StaticResource IconCog}"
+                                 Foreground="{StaticResource TextSecondary}"
+                                 Size="20" />
+                </Button>
+            </Grid>
 
-        <Border CornerRadius="12"
-                Padding="12,5"
-                HorizontalAlignment="Center">
-            <Border.Style>
-                <Style TargetType="Border">
-                    <Setter Property="Background" Value="#DDEFD9" />
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding IsLocked}" Value="True">
-                            <Setter Property="Background" Value="#F6D8D2" />
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </Border.Style>
-            <StackPanel Orientation="Horizontal">
-                <Ellipse Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,7,0">
-                    <Ellipse.Style>
-                        <Style TargetType="Ellipse">
-                            <Setter Property="Fill" Value="#4E9A51" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsLocked}" Value="True">
-                                    <Setter Property="Fill" Value="#C24E38" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Ellipse.Style>
-                </Ellipse>
-                <TextBlock Text="{Binding StatusText}" FontWeight="SemiBold">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Foreground" Value="#3E7A41" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsLocked}" Value="True">
-                                    <Setter Property="Foreground" Value="#A03A26" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
-            </StackPanel>
-        </Border>
+            <Border Style="{StaticResource CardBorder}" Padding="20,18">
+                <StackPanel>
+                    <Border CornerRadius="20" Padding="12,5" HorizontalAlignment="Center">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="{StaticResource AccentSoft}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsLocked}" Value="True">
+                                        <Setter Property="Background" Value="{StaticResource DangerSoft}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,8,0">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse">
+                                        <Setter Property="Fill" Value="{StaticResource Accent}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsLocked}" Value="True">
+                                                <Setter Property="Fill" Value="{StaticResource Danger}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+                            <TextBlock Text="{Binding StatusText}" FontSize="12" FontWeight="SemiBold">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{StaticResource Accent}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsLocked}" Value="True">
+                                                <Setter Property="Foreground" Value="{StaticResource Danger}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
 
-        <Button Command="{Binding ToggleLockCommand}"
-                Content="{Binding ToggleButtonText}"
-                Margin="0,16,0,8"
-                Height="52"
-                FontSize="17"
-                FontWeight="SemiBold"
-                Foreground="White"
-                Cursor="Hand">
-            <Button.Style>
-                <Style TargetType="Button">
-                    <Setter Property="Background" Value="#E8963C" />
-                    <Setter Property="Template">
-                        <Setter.Value>
-                            <ControlTemplate TargetType="Button">
-                                <Border Background="{TemplateBinding Background}"
-                                        CornerRadius="12">
-                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                </Border>
-                            </ControlTemplate>
-                        </Setter.Value>
-                    </Setter>
-                    <Style.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#D9822B" />
-                        </Trigger>
-                        <DataTrigger Binding="{Binding IsLocked}" Value="True">
-                            <Setter Property="Background" Value="#B0684A" />
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </Button.Style>
-        </Button>
+                    <Image Source="{Binding CatPreview}"
+                           Width="128" Height="96"
+                           Margin="0,14,0,10"
+                           RenderOptions.BitmapScalingMode="NearestNeighbor" />
 
-        <TextBlock Text="{Binding HotkeyText, StringFormat=Shortcut: {0}}"
-                   HorizontalAlignment="Center"
-                   Foreground="#8A785F"
-                   Margin="0,0,0,14" />
+                    <Button Command="{Binding ToggleLockCommand}"
+                            Content="{Binding ToggleButtonText}"
+                            Style="{StaticResource PrimaryButton}"
+                            Margin="0,4,0,10" />
 
-        <Border Background="#F7EDD8" CornerRadius="10" Padding="16,12">
-            <StackPanel>
-                <TextBlock Text="Settings" FontWeight="Bold" FontSize="15" Foreground="#4A3B2A" Margin="0,0,0,8" />
+                    <TextBlock HorizontalAlignment="Center" Style="{StaticResource Caption}">
+                        <Run Text="Shortcut" />
+                        <Run Text="{Binding HotkeyText, Mode=OneWay}" Foreground="{StaticResource TextPrimary}" FontWeight="SemiBold" />
+                    </TextBlock>
+                </StackPanel>
+            </Border>
 
-                <CheckBox Content="Lock keyboard" IsChecked="{Binding LockKeyboard}" Margin="0,3" />
-                <CheckBox Content="Lock mouse" IsChecked="{Binding LockMouse}" Margin="0,3" />
-                <CheckBox Content="Detect cat automatically" IsChecked="{Binding DetectionEnabled}" Margin="0,3" />
-                <CheckBox Content="Sounds" IsChecked="{Binding SoundsEnabled}" Margin="0,3" />
-
-                <Grid Margin="0,10,0,0">
+            <Border Style="{StaticResource CardBorder}" Margin="0,12,0,0" Padding="18,14">
+                <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="30" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition />
-                        <RowDefinition />
-                        <RowDefinition />
-                    </Grid.RowDefinitions>
-
-                    <TextBlock Text="Sensitivity" VerticalAlignment="Center" Margin="0,0,10,6" />
-                    <Slider Grid.Column="1"
-                            Minimum="1" Maximum="10"
-                            IsSnapToTickEnabled="True" TickFrequency="1"
-                            Value="{Binding Sensitivity}"
-                            VerticalAlignment="Center" Margin="0,0,8,6" />
-                    <TextBlock Grid.Column="2" Text="{Binding Sensitivity}" VerticalAlignment="Center" Margin="0,0,0,6" />
-
-                    <TextBlock Grid.Row="1" Text="Sleep after (s)" VerticalAlignment="Center" Margin="0,0,10,6" />
-                    <Slider Grid.Row="1" Grid.Column="1"
-                            Minimum="3" Maximum="60"
-                            IsSnapToTickEnabled="True" TickFrequency="1"
-                            Value="{Binding SecondsUntilSleep}"
-                            VerticalAlignment="Center" Margin="0,0,8,6" />
-                    <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding SecondsUntilSleep}" VerticalAlignment="Center" Margin="0,0,0,6" />
-
-                    <TextBlock Grid.Row="2" Text="Shortcut" VerticalAlignment="Center" Margin="0,0,10,0" />
-                    <ui:HotkeyCaptureBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
-                                         Combo="{Binding ToggleHotkey}"
-                                         VerticalAlignment="Center"
-                                         Padding="6,4" />
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="{Binding DetectionSummary}" FontSize="13" />
+                        <TextBlock Text="{Binding ActivitySummary}" Style="{StaticResource Caption}" Margin="0,3,0,0" />
+                    </StackPanel>
+                    <Button Grid.Column="1"
+                            Style="{StaticResource GhostButton}"
+                            Content="Activity"
+                            VerticalAlignment="Center"
+                            Click="OnActivityClicked" />
                 </Grid>
-            </StackPanel>
-        </Border>
-
-        <TextBlock Text="{Binding LastInputDebug}"
-                   FontFamily="Consolas"
-                   FontSize="11"
-                   Foreground="#B0A48F"
-                   HorizontalAlignment="Center"
-                   Margin="0,8,0,0" />
-    </StackPanel>
+            </Border>
+        </StackPanel>
+    </Border>
 </Window>

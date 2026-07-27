@@ -37,6 +37,9 @@ public sealed class TrayIconService : IDisposable
         _icon.Text = locked ? "CatSit (locked)" : "CatSit";
     }
 
+    public void Notify(string title, string message) =>
+        _icon.ShowBalloonTip(4000, title, message, WinForms.ToolTipIcon.Info);
+
     public void Dispose()
     {
         _icon.Visible = false;

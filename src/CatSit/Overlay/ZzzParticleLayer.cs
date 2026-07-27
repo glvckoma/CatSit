@@ -17,13 +17,15 @@ public sealed class ZzzParticleLayer
         _zzzBitmap = zzzBitmap;
     }
 
+    public double ParticleSize { get; set; } = 32;
+
     public void Spawn(double x, double y)
     {
         var image = new Image
         {
             Source = _zzzBitmap,
-            Width = 32,
-            Height = 32,
+            Width = ParticleSize,
+            Height = ParticleSize,
             IsHitTestVisible = false
         };
         RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.NearestNeighbor);
