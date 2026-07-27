@@ -16,4 +16,10 @@
     <Geometry x:Key="IconClose">M18 6 6 18 M6 6l12 12</Geometry>
 
     <Geometry x:Key="IconLock">M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z M7 11V7a5 5 0 0 1 10 0v4</Geometry>
+
+    <Geometry x:Key="IconMinimize">M5 12h14</Geometry>
+
+    <Geometry x:Key="IconMaximize">M5 5h14v14H5z</Geometry>
+
+    <Geometry x:Key="IconRestore">M8 8V5h11v11h-3 M5 8h11v11H5z</Geometry>
 </ResourceDictionary>

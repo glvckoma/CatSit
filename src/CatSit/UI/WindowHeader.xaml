@@ -1,0 +1,50 @@
+<UserControl x:Class="CatSit.UI.WindowHeader"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="clr-namespace:CatSit.UI"
+             xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+             Height="46">
+    <Border Background="{StaticResource Surface}"
+            BorderBrush="{StaticResource Stroke}"
+            BorderThickness="0,0,0,1">
+        <Grid>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                <Border Width="22" Height="22" CornerRadius="7" Background="{StaticResource AccentSoft}">
+                    <ui:IconPath Geometry="{StaticResource IconCat}"
+                                 Foreground="{StaticResource Accent}"
+                                 Size="14"
+                                 HorizontalAlignment="Center"
+                                 VerticalAlignment="Center" />
+                </Border>
+                <TextBlock x:Name="TitleText"
+                           Margin="10,0,0,0"
+                           VerticalAlignment="Center"
+                           FontSize="12.5"
+                           Foreground="{StaticResource TextSecondary}" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Margin="0,0,6,0"
+                        shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                <Button x:Name="MinimizeButton" Style="{StaticResource CaptionButton}" Click="OnMinimize" ToolTip="Minimize">
+                    <ui:IconPath Geometry="{StaticResource IconMinimize}"
+                                 Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                 Size="16" />
+                </Button>
+                <Button x:Name="MaximizeButton" Style="{StaticResource CaptionButton}" Click="OnMaximize" ToolTip="Maximize">
+                    <ui:IconPath x:Name="MaximizeIcon"
+                                 Geometry="{StaticResource IconMaximize}"
+                                 Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                 Size="13" />
+                </Button>
+                <Button Style="{StaticResource CloseCaptionButton}" Click="OnClose" ToolTip="Close">
+                    <ui:IconPath Geometry="{StaticResource IconClose}"
+                                 Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                 Size="15" />
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

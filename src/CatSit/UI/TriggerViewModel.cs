@@ -58,4 +58,7 @@ public sealed class ExclusionViewModel
     public ICommand RemoveCommand { get; }
 }
 
-public sealed record NamedOption<T>(string Name, T Value);
+public sealed record NamedOption<T>(string Name, T Value)
+{
+    public override string ToString() => Name;
+}
