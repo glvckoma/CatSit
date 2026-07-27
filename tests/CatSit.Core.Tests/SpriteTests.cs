@@ -43,6 +43,55 @@ public class SpriteRasterizerTests
     }
 }
 
+public class UpscaleNearestTests
+{
+    private static readonly uint[] TwoByTwo = [0xFF000001, 0xFF000002, 0xFF000003, 0xFF000004];
+
+    [Fact]
+    public void FactorOne_ReturnsEquivalentPixels()
+    {
+        var result = SpriteRasterizer.UpscaleNearest(TwoByTwo, 2, 2, 1);
+        Assert.Equal(TwoByTwo, result);
+    }
+
+    [Fact]
+    public void FactorTwo_ProducesQuadrupleSizedBlocks()
+    {
+        var result = SpriteRasterizer.UpscaleNearest(TwoByTwo, 2, 2, 2);
+        Assert.Equal(16, result.Length);
+        var width = 2 * 2;
+        Assert.Equal(0xFF000001u, result[0 * width + 0]);
+        Assert.Equal(0xFF000001u, result[1 * width + 1]);
+        Assert.Equal(0xFF000002u, result[0 * width + 2]);
+        Assert.Equal(0xFF000002u, result[1 * width + 3]);
+        Assert.Equal(0xFF000003u, result[2 * width + 0]);
+        Assert.Equal(0xFF000004u, result[3 * width + 3]);
+    }
+
+    [Fact]
+    public void FactorFour_PreservesEveryOriginalPixelAsASolidBlock()
+    {
+        var result = SpriteRasterizer.UpscaleNearest(TwoByTwo, 2, 2, 4);
+        var width = 2 * 4;
+        Assert.Equal(64, result.Length);
+        for (var y = 0; y < 4; y++)
+        {
+            for (var x = 0; x < 4; x++)
+            {
+                Assert.Equal(0xFF000001u, result[y * width + x]);
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void NonPositiveFactor_Throws(int factor)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => SpriteRasterizer.UpscaleNearest(TwoByTwo, 2, 2, factor));
+    }
+}
+
 public class CatSpritesTests
 {
     [Fact]

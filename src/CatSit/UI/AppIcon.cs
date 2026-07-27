@@ -7,6 +7,8 @@ namespace CatSit.UI;
 
 public static class AppIcon
 {
+    private const int UpscaleFactor = 4;
+
     private static readonly Lazy<BitmapSource> Bitmap = new(Build);
 
     public static BitmapSource Image => Bitmap.Value;
@@ -15,8 +17,11 @@ public static class AppIcon
     {
         var frame = AppIconArt.Icon;
         var pixels = SpriteRasterizer.Rasterize(frame, AppIconArt.Palette);
-        var bitmap = new WriteableBitmap(frame.Width, frame.Height, 96, 96, PixelFormats.Bgra32, null);
-        bitmap.WritePixels(new Int32Rect(0, 0, frame.Width, frame.Height), pixels, frame.Width * 4, 0);
+        var scaled = SpriteRasterizer.UpscaleNearest(pixels, frame.Width, frame.Height, UpscaleFactor);
+        var width = frame.Width * UpscaleFactor;
+        var height = frame.Height * UpscaleFactor;
+        var bitmap = new WriteableBitmap(width, height, 96, 96, PixelFormats.Bgra32, null);
+        bitmap.WritePixels(new Int32Rect(0, 0, width, height), scaled, width * 4, 0);
         bitmap.Freeze();
         return bitmap;
     }

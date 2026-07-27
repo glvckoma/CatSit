@@ -20,4 +20,28 @@ public static class SpriteRasterizer
         }
         return pixels;
     }
+
+    public static uint[] UpscaleNearest(uint[] pixels, int width, int height, int factor)
+    {
+        if (factor < 1) throw new ArgumentOutOfRangeException(nameof(factor));
+        if (factor == 1) return pixels;
+        var scaledWidth = width * factor;
+        var result = new uint[scaledWidth * height * factor];
+        for (var y = 0; y < height; y++)
+        {
+            for (var x = 0; x < width; x++)
+            {
+                var color = pixels[y * width + x];
+                for (var dy = 0; dy < factor; dy++)
+                {
+                    var rowStart = (y * factor + dy) * scaledWidth + x * factor;
+                    for (var dx = 0; dx < factor; dx++)
+                    {
+                        result[rowStart + dx] = color;
+                    }
+                }
+            }
+        }
+        return result;
+    }
 }
