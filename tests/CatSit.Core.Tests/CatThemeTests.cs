@@ -111,7 +111,9 @@ public class CatThemeTests
         Assert.Equal(theme.Stripes, palette['D']);
         Assert.Equal(theme.Belly, palette['C']);
         Assert.Equal(theme.Ears, palette['P']);
-        Assert.Equal(theme.Eyes, palette['E']);
+        Assert.Equal(theme.Eyes, palette['I']);
+        Assert.Equal(theme.Whiskers, palette['S']);
+        Assert.Equal(theme.Highlight, palette['L']);
     }
 }
 

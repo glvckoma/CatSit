@@ -9,12 +9,13 @@ using CatSit.Core.Settings;
 using CatSit.Core.Sprites;
 using CatSit.Interop;
 
+
 namespace CatSit.Overlay;
 
 public partial class OverlayWindow : Window
 {
-    private const int SpriteWidth = 32;
-    private const int SpriteHeight = 24;
+    private const int SpriteWidth = CatSprites.FrameWidth;
+    private const int SpriteHeight = CatSprites.FrameHeight;
 
     private readonly SpriteBitmapCache _cache;
     private readonly AppSettings _settings;

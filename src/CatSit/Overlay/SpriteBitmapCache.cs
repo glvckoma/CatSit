@@ -18,6 +18,8 @@ public sealed class SpriteBitmapCache
 
     public BitmapSource ZzzBitmap { get; private set; } = null!;
 
+    public BitmapSource IconImage { get; private set; } = null!;
+
     public CatTheme Theme => _theme;
 
     public void Rebuild(CatTheme theme)
@@ -30,6 +32,7 @@ public sealed class SpriteBitmapCache
             _cache[(frame, true)] = Build(frame, true, theme);
         }
         ZzzBitmap = Build(CatSprites.Zzz, false, theme);
+        IconImage = Build(CatSprites.IconFace, false, theme);
     }
 
     public BitmapSource Get(CatState state, int frameIndex, bool mirrored) =>

@@ -115,7 +115,7 @@ public partial class App : Application
         tray.OpenRequested += window.ShowFromTray;
         tray.ExitRequested += Shutdown;
 
-        window.Icon = sprites.Get(Core.Animation.CatState.Sitting, 0, false);
+        window.Icon = sprites.IconImage;
         MainWindow = window;
         StartShowEventListener();
         window.Show();

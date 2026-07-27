@@ -46,16 +46,63 @@ public class SpriteRasterizerTests
 public class CatSpritesTests
 {
     [Fact]
-    public void AllCatFrames_Are32By24WithPaletteCharsOnly()
+    public void AllCatFrames_MatchFrameSizeWithPaletteCharsOnly()
     {
         var frames = CatSprites.AllCatFrames.ToList();
         Assert.NotEmpty(frames);
         foreach (var frame in frames)
         {
-            Assert.Equal(24, frame.Height);
-            Assert.All(frame.Rows, row => Assert.Equal(32, row.Length));
+            Assert.Equal(CatSprites.FrameHeight, frame.Height);
+            Assert.All(frame.Rows, row => Assert.Equal(CatSprites.FrameWidth, row.Length));
             Assert.All(frame.Rows, row => Assert.All(row, c => Assert.Contains(c, CatPalette.Colors.Keys)));
         }
+    }
+
+    [Fact]
+    public void EveryCatFrame_HasPointyEarsWithPinkInnerAndWhiskers()
+    {
+        foreach (var frame in CatSprites.AllCatFrames)
+        {
+            Assert.Contains(frame.Rows, row => row.Contains('P'));
+            Assert.Contains(frame.Rows, row => row.Contains('S'));
+        }
+    }
+
+    [Fact]
+    public void EveryCatFrame_HasATail()
+    {
+        foreach (var frame in CatSprites.AllCatFrames)
+        {
+            Assert.Contains(frame.Rows, row => row.Contains('L'));
+        }
+    }
+
+    [Fact]
+    public void AwakeFrames_HaveTwoEyesWithHighlights()
+    {
+        foreach (var frame in new[] { CatSprites.Sitting, CatSprites.Laying, CatSprites.Walk[0] })
+        {
+            Assert.Contains(frame.Rows, row => row.Contains('I'));
+            Assert.Contains(frame.Rows, row => row.Contains('W'));
+        }
+    }
+
+    [Fact]
+    public void SleepingFrames_HaveClosedEyes()
+    {
+        foreach (var frame in CatSprites.Sleep)
+        {
+            Assert.DoesNotContain(frame.Rows, row => row.Contains('I'));
+            Assert.Contains(frame.Rows, row => row.Contains('E'));
+        }
+    }
+
+    [Fact]
+    public void IconFace_IsSquareAndPaletteOnly()
+    {
+        Assert.Equal(16, CatSprites.IconFace.Width);
+        Assert.Equal(16, CatSprites.IconFace.Height);
+        Assert.All(CatSprites.IconFace.Rows, row => Assert.All(row, c => Assert.Contains(c, CatPalette.Colors.Keys)));
     }
 
     [Fact]

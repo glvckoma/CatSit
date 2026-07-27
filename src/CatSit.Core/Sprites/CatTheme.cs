@@ -50,15 +50,22 @@ public sealed record CatTheme(uint Fur, uint Stripes, uint Belly, uint Ears, uin
         _ => breed.ToString()
     };
 
+    public uint Highlight => ColorMath.Lighten(Fur, 0.2);
+
+    public uint Whiskers => ColorMath.Luminance(Fur) > 0.55 ? 0xFF4A4A52 : 0xFFFFFFFF;
+
     public IReadOnlyDictionary<char, uint> ToPalette() => new Dictionary<char, uint>
     {
         ['.'] = 0x00000000,
         ['O'] = Fur,
+        ['L'] = Highlight,
         ['D'] = Stripes,
         ['C'] = Belly,
         ['P'] = Ears,
+        ['I'] = Eyes,
+        ['E'] = 0xFF1B140F,
         ['W'] = 0xFFFFFFFF,
-        ['E'] = Eyes,
+        ['S'] = Whiskers,
         ['Z'] = 0xFF9FC4E8
     };
 }
