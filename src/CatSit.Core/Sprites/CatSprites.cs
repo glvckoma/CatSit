@@ -6,30 +6,10 @@ public static class CatSprites
     public const int FrameHeight = 30;
 
     public static readonly SpriteFrame[] Walk = [WalkFrame(0), WalkFrame(1), WalkFrame(2), WalkFrame(3)];
-    public static readonly SpriteFrame Crouch = CrouchFrame();
+    public static readonly SpriteFrame SittingDown = SittingDownFrame();
     public static readonly SpriteFrame Sitting = SittingFrame();
     public static readonly SpriteFrame Laying = LayingFrame(false, false);
     public static readonly SpriteFrame[] Sleep = [LayingFrame(true, false), LayingFrame(true, true)];
-    public static readonly SpriteFrame Face = FaceFrame();
-
-    public static readonly SpriteFrame IconFace = new([
-        "...O......O.....",
-        "..OPO....OPO....",
-        ".OOPPO..OOPPO...",
-        ".OOOOOOOOOOOOOO.",
-        ".OOODOOOODOOOOO.",
-        ".OOOOOOOOOOOOOO.",
-        ".OOIIOOOOOOIIOO.",
-        ".OOEWOOOOOOEWOO.",
-        ".OOOOOOOOOOOOOO.",
-        ".SOOOCCPPCCOOOS.",
-        ".SOOOCCCCCCOOOS.",
-        ".OOOOCCCCCCOOOO.",
-        ".OOOOOOOOOOOOOO.",
-        "..OOOOOOOOOOOO..",
-        "...OOOOOOOOOO...",
-        "................"
-    ]);
 
     public static readonly SpriteFrame Zzz = new([
         "........",
@@ -42,7 +22,7 @@ public static class CatSprites
         "........"
     ]);
 
-    public static IEnumerable<SpriteFrame> AllCatFrames => [.. Walk, Crouch, Sitting, Laying, .. Sleep];
+    public static IEnumerable<SpriteFrame> AllCatFrames => [.. Walk, SittingDown, Sitting, Laying, .. Sleep];
 
     private static string[] Head(bool asleep) =>
     [
@@ -87,23 +67,28 @@ public static class CatSprites
         ]),
         Offset(0, Head(false)));
 
-    private static SpriteFrame CrouchFrame() => Compose(
-        Offset(18, [
-            "....LLL",
-            "...LLDL",
-            "...LLLL"
+    private static SpriteFrame SittingDownFrame() => Compose(
+        Offset(24, [
+            "LLLLLL",
+            ".LLLLLLL",
+            "...LLLLL"
         ]),
-        Offset(16, [
-            "..........OOOOOOOOOOOOOOOOOOOO",
-            ".......OOOOOOOOOOOOOOOOOOOOOOOO",
-            ".....OOOODOOODOOOODOOOOOOLCCCCLO",
-            "....OOOODOOODOOOODOOOOOOOLCCCCCO",
-            "....OOOOOOOOOOOOOOOOOOOOOLCCCCCO",
-            "....OOOOOOOOOOOOOOOOOOOOOCCCCCCO",
-            "...LLLLLDLLLLDLLLLDLLLLDLLLLLLLL",
-            "....OOOO...OOOO.....OOOO..OOOO"
+        Offset(15, [
+            "....................OOOOOOOO",
+            "..............OOOOOOOOOOOOOO",
+            "..........OOOOOOOOOOOOLCCCLO",
+            "........OOOODOOODOOOOOLCCCCO",
+            ".......OOOODOOODOOODOOLCCCCO",
+            "......OOOOOOOOOOOOOOOOLCCCCO",
+            "......OOOODOOODOOODOOOCCCCCO",
+            "......OOOOOOOOOOOOOOOOCCCCCO",
+            "......OOOOOOOOOOOODDDDOOOOOO",
+            ".......OOOOOOOOOOODDDD.OOOO",
+            "........OOOOOOOOOODDDD.OOOO",
+            ".........OOOOOOOOODDDD.OOOO",
+            "..........LLLLLLLODDDD.LLLL"
         ]),
-        Offset(3, Head(false)));
+        Offset(1, Head(false)));
 
     private static SpriteFrame LayingFrame(bool asleep, bool breathing) => Compose(
         Offset(breathing ? 18 : 17, [
@@ -122,15 +107,51 @@ public static class CatSprites
 
     private static SpriteFrame WalkFrame(int step)
     {
-        var legs = step switch
+        var contact = step % 2 == 0;
+        var bob = contact ? 1 : 0;
+        string[] legs = step switch
         {
-            0 => WalkLegs(5, 10, 17, 22),
-            1 => WalkLegs(7, 9, 19, 21),
-            2 => WalkLegs(4, 11, 16, 23),
-            _ => WalkLegs(6, 9, 18, 21)
+            0 =>
+            [
+                "....DDDD.OOOO...DDDD.OOOO",
+                "....DDDD.OOOO...DDDD.OOOO",
+                "....DDDD.OOOO...DDDD.OOOO",
+                "....DDDD.OOOO...DDDD.OOOO",
+                "....DDDD.OOOO...DDDD.OOOO",
+                "....DDDD.LLLL...DDDD.LLLL"
+            ],
+            2 =>
+            [
+                "....OOOO.DDDD...OOOO.DDDD",
+                "....OOOO.DDDD...OOOO.DDDD",
+                "....OOOO.DDDD...OOOO.DDDD",
+                "....OOOO.DDDD...OOOO.DDDD",
+                "....OOOO.DDDD...OOOO.DDDD",
+                "....LLLL.DDDD...LLLL.DDDD"
+            ],
+            1 =>
+            [
+                "...DDDD.OOOO....OOOODDD",
+                "...DDDD.OOOO....OOOODDD",
+                "...DDDD.OOOO....OOOODDD",
+                "...DDDD.OOOO....OOOODDD",
+                "....DDDDOOOO.....OOOODD",
+                "........OOOO.......DDDD",
+                "........LLLL.......DDDD"
+            ],
+            _ =>
+            [
+                "...OOOO.DDDD....DDDOOOO",
+                "...OOOO.DDDD....DDDOOOO",
+                "...OOOO.DDDD....DDDOOOO",
+                "...OOOO.DDDD....DDDOOOO",
+                "....OOOODDDD.....DDOOOO",
+                "........DDDD.......OOOO",
+                "........DDDD.......LLLL"
+            ]
         };
         return Compose(
-            Offset(7, [
+            Offset(7 + bob, [
                 ".LLL",
                 "LLL",
                 "LDL",
@@ -141,7 +162,7 @@ public static class CatSprites
                 "..LLL",
                 "...LL"
             ]),
-            Offset(13, [
+            Offset(13 + bob, [
                 "..........OOOOOOOOOOOOOOO",
                 "......OOOOOOOOOOOOOOOOOOO",
                 "....OOOOOOOOOOOOOOOOOOOOO",
@@ -153,44 +174,8 @@ public static class CatSprites
                 "..OOOOOOOOCCCCCCOOOOOOOOOO",
                 "...OOOOOOOOOOOOOOOOOOOOOOO"
             ]),
-            Offset(22, legs),
-            Offset(0, Head(false)));
-    }
-
-    private static string[] WalkLegs(int backNear, int backFar, int frontNear, int frontFar)
-    {
-        var legs = new string[7];
-        for (var row = 0; row < legs.Length; row++)
-        {
-            var line = new char[FrameWidth];
-            Array.Fill(line, '.');
-            var paw = row == legs.Length - 1;
-            DrawLeg(line, backFar, 'D');
-            DrawLeg(line, frontFar, 'D');
-            DrawLeg(line, backNear, paw ? 'L' : 'O');
-            DrawLeg(line, frontNear, paw ? 'L' : 'O');
-            legs[row] = new string(line);
-        }
-        return legs;
-    }
-
-    private static void DrawLeg(char[] line, int x, char shade)
-    {
-        for (var i = 0; i < 4; i++)
-        {
-            if (x + i >= 0 && x + i < line.Length) line[x + i] = shade;
-        }
-    }
-
-    private static SpriteFrame FaceFrame()
-    {
-        var head = Head(false);
-        var rows = new List<string>();
-        foreach (var row in head)
-        {
-            rows.Add(row.PadRight(FrameWidth, '.').Substring(19, 18));
-        }
-        return new SpriteFrame([.. rows]);
+            Offset(22 + bob, legs),
+            Offset(bob, Head(false)));
     }
 
     private static string[] Offset(int rows, string[] art) => [.. Enumerable.Repeat(string.Empty, rows), .. art];

@@ -98,11 +98,34 @@ public class CatSpritesTests
     }
 
     [Fact]
-    public void IconFace_IsSquareAndPaletteOnly()
+    public void AppIcon_Is32SquarePaletteOnlyWithTransparentCorners()
     {
-        Assert.Equal(16, CatSprites.IconFace.Width);
-        Assert.Equal(16, CatSprites.IconFace.Height);
-        Assert.All(CatSprites.IconFace.Rows, row => Assert.All(row, c => Assert.Contains(c, CatPalette.Colors.Keys)));
+        Assert.Equal(32, AppIconArt.Icon.Width);
+        Assert.Equal(32, AppIconArt.Icon.Height);
+        Assert.All(AppIconArt.Icon.Rows, row => Assert.All(row, c => Assert.Contains(c, AppIconArt.Palette.Keys)));
+        Assert.Equal('.', AppIconArt.Icon.Rows[2][0]);
+        Assert.Equal('.', AppIconArt.Icon.Rows[29][31]);
+    }
+
+    [Fact]
+    public void AppIcon_HasTilePointyEarsWhiskersAndGreenEyes()
+    {
+        var rows = AppIconArt.Icon.Rows;
+        Assert.Contains(rows, row => row.Contains('B'));
+        Assert.Contains(rows, row => row.Contains('S'));
+        Assert.Contains(rows, row => row.Contains('G'));
+        Assert.Contains('O', rows[0]);
+        Assert.DoesNotContain('T', rows[0]);
+    }
+
+    [Fact]
+    public void Rasterize_WithExplicitPalette_UsesIt()
+    {
+        var frame = new SpriteFrame(["XY"]);
+        var palette = new Dictionary<char, uint> { ['X'] = 0xFF112233, ['Y'] = 0xFF445566 };
+        var pixels = SpriteRasterizer.Rasterize(frame, palette);
+        Assert.Equal(0xFF112233u, pixels[0]);
+        Assert.Equal(0xFF445566u, pixels[1]);
     }
 
     [Fact]

@@ -18,8 +18,6 @@ public sealed class SpriteBitmapCache
 
     public BitmapSource ZzzBitmap { get; private set; } = null!;
 
-    public BitmapSource IconImage { get; private set; } = null!;
-
     public CatTheme Theme => _theme;
 
     public void Rebuild(CatTheme theme)
@@ -32,7 +30,6 @@ public sealed class SpriteBitmapCache
             _cache[(frame, true)] = Build(frame, true, theme);
         }
         ZzzBitmap = Build(CatSprites.Zzz, false, theme);
-        IconImage = Build(CatSprites.IconFace, false, theme);
     }
 
     public BitmapSource Get(CatState state, int frameIndex, bool mirrored) =>
@@ -43,7 +40,7 @@ public sealed class SpriteBitmapCache
     private static SpriteFrame FrameFor(CatState state, int frameIndex) => state switch
     {
         CatState.WalkIn or CatState.WalkOut => CatSprites.Walk[frameIndex % CatSprites.Walk.Length],
-        CatState.SitDown => CatSprites.Crouch,
+        CatState.SitDown => CatSprites.SittingDown,
         CatState.Sitting => CatSprites.Sitting,
         CatState.LayDown or CatState.Laying => CatSprites.Laying,
         CatState.Sleeping => CatSprites.Sleep[frameIndex % CatSprites.Sleep.Length],

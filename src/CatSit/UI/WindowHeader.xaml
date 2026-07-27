@@ -10,8 +10,8 @@
         <Grid>
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
                 <Image Source="{x:Static ui:AppIcon.Image}"
-                       Width="20" Height="20"
-                       RenderOptions.BitmapScalingMode="NearestNeighbor" />
+                       Width="16" Height="16"
+                       RenderOptions.BitmapScalingMode="Fant" />
                 <TextBlock x:Name="TitleText"
                            Margin="10,0,0,0"
                            VerticalAlignment="Center"

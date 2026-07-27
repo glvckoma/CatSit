@@ -6,20 +6,16 @@ namespace CatSit.UI;
 
 public static class TrayIconFactory
 {
-    public static Icon Create(CatTheme? theme = null)
+    public static Icon Create()
     {
-        var frame = CatSprites.IconFace;
-        var pixels = SpriteRasterizer.Rasterize(frame, false, theme);
-        using var bitmap = new Bitmap(32, 32, PixelFormat.Format32bppArgb);
+        var frame = AppIconArt.Icon;
+        var pixels = SpriteRasterizer.Rasterize(frame, AppIconArt.Palette);
+        using var bitmap = new Bitmap(frame.Width, frame.Height, PixelFormat.Format32bppArgb);
         for (var y = 0; y < frame.Height; y++)
         {
             for (var x = 0; x < frame.Width; x++)
             {
-                var color = Color.FromArgb(unchecked((int)pixels[y * frame.Width + x]));
-                bitmap.SetPixel(x * 2, y * 2, color);
-                bitmap.SetPixel(x * 2 + 1, y * 2, color);
-                bitmap.SetPixel(x * 2, y * 2 + 1, color);
-                bitmap.SetPixel(x * 2 + 1, y * 2 + 1, color);
+                bitmap.SetPixel(x, y, Color.FromArgb(unchecked((int)pixels[y * frame.Width + x])));
             }
         }
         return Icon.FromHandle(bitmap.GetHicon());
