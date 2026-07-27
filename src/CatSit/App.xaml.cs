@@ -26,6 +26,7 @@ public partial class App : Application
     private ActivityStore? _activityStore;
     private TriggerLog? _log;
     private CatClassifier? _classifier;
+    private bool _trayHintShown;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -111,11 +112,19 @@ public partial class App : Application
         };
 
         window.SettingsRequested += section => ShowSettings(viewModel, window, section);
+        window.HiddenToTray += () =>
+        {
+            if (_trayHintShown) return;
+            _trayHintShown = true;
+            tray.Notify("CatSit is still running", "Find it in the tray. Right-click the icon to exit.");
+        };
+        window.Closed += (_, _) => Shutdown();
         tray.ToggleRequested += controller.Toggle;
         tray.OpenRequested += window.ShowFromTray;
         tray.ExitRequested += Shutdown;
 
-        window.Icon = sprites.IconImage;
+        StartupRegistration.Sync(settings.StartWithWindows);
+        window.Icon = AppIcon.Image;
         MainWindow = window;
         StartShowEventListener();
         window.Show();

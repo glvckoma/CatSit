@@ -238,6 +238,23 @@ public sealed class MainViewModel : INotifyPropertyChanged
         set { Settings.AutoUnlockMinutes = value; SaveAndRaise(); OnPropertyChanged(nameof(AutoUnlockText)); }
     }
 
+    public bool StartWithWindows
+    {
+        get => Settings.StartWithWindows;
+        set
+        {
+            Settings.StartWithWindows = value;
+            StartupRegistration.Apply(value);
+            SaveAndRaise();
+        }
+    }
+
+    public bool CloseToTray
+    {
+        get => Settings.CloseToTray;
+        set { Settings.CloseToTray = value; SaveAndRaise(); }
+    }
+
     public int Sensitivity
     {
         get => Settings.Sensitivity;

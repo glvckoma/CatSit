@@ -9,13 +9,9 @@
             BorderThickness="0,0,0,1">
         <Grid>
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
-                <Border Width="22" Height="22" CornerRadius="7" Background="{StaticResource AccentSoft}">
-                    <ui:IconPath Geometry="{StaticResource IconCat}"
-                                 Foreground="{StaticResource Accent}"
-                                 Size="14"
-                                 HorizontalAlignment="Center"
-                                 VerticalAlignment="Center" />
-                </Border>
+                <Image Source="{x:Static ui:AppIcon.Image}"
+                       Width="20" Height="20"
+                       RenderOptions.BitmapScalingMode="NearestNeighbor" />
                 <TextBlock x:Name="TitleText"
                            Margin="10,0,0,0"
                            VerticalAlignment="Center"

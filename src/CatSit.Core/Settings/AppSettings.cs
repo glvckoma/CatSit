@@ -24,6 +24,8 @@ public sealed class AppSettings
     public bool ShowUnlockHint { get; set; } = true;
     public bool LearningEnabled { get; set; } = true;
     public int AutoUnlockMinutes { get; set; }
+    public bool StartWithWindows { get; set; }
+    public bool CloseToTray { get; set; } = true;
 
     public bool SoundsEnabled { get; set; } = true;
     public int Volume { get; set; } = 70;

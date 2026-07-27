@@ -108,6 +108,12 @@
                                          CaretBrush="Transparent" />
                     <TextBlock Text="Click the box and press a combination with at least one modifier." Style="{StaticResource Caption}" Margin="0,6,0,18" />
 
+                    <TextBlock Text="Windows" Style="{StaticResource SectionTitle}" />
+                    <CheckBox Content="Start CatSit when Windows starts" IsChecked="{Binding StartWithWindows}" />
+                    <CheckBox Content="Closing the window keeps CatSit in the tray" IsChecked="{Binding CloseToTray}" />
+                    <TextBlock Text="With this off, closing the window exits CatSit and stops guarding."
+                               Style="{StaticResource Caption}" Margin="0,2,0,18" TextWrapping="Wrap" MaxWidth="430" HorizontalAlignment="Left" />
+
                     <TextBlock Text="Behavior" Style="{StaticResource SectionTitle}" />
                     <CheckBox Content="Show unlock hint on screen" IsChecked="{Binding ShowUnlockHint}" />
                     <CheckBox Content="Click the cat to dismiss it" IsChecked="{Binding ClickToDismiss}" />

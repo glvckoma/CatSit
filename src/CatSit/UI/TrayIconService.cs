@@ -19,7 +19,7 @@ public sealed class TrayIconService : IDisposable
         menu.Items.AddRange([_toggleItem, openItem, new WinForms.ToolStripSeparator(), exitItem]);
         _icon = new WinForms.NotifyIcon
         {
-            Icon = TrayIconFactory.Create(),
+            Icon = TrayIconFactory.Create(AppIcon.Theme),
             Text = "CatSit",
             Visible = true,
             ContextMenuStrip = menu

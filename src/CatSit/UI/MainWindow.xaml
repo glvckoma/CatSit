@@ -16,20 +16,11 @@
         <DockPanel>
             <ui:WindowHeader DockPanel.Dock="Top" HeaderTitle="CatSit" />
             <StackPanel Margin="22,18,22,22">
-            <Grid Margin="0,0,0,18">
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Width="34" Height="34" CornerRadius="10" Background="{StaticResource AccentSoft}">
-                        <ui:IconPath Geometry="{StaticResource IconCat}"
-                                     Foreground="{StaticResource Accent}"
-                                     Size="20"
-                                     HorizontalAlignment="Center"
-                                     VerticalAlignment="Center" />
-                    </Border>
-                    <StackPanel Margin="11,0,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="CatSit" FontSize="19" FontWeight="SemiBold" />
-                        <TextBlock Text="{Binding ModeSummary}" Style="{StaticResource Caption}" />
-                    </StackPanel>
-                </StackPanel>
+            <Grid Margin="0,0,0,12">
+                <TextBlock Text="{Binding ModeSummary}"
+                           Style="{StaticResource Caption}"
+                           FontSize="13"
+                           VerticalAlignment="Center" />
                 <Button Style="{StaticResource IconButton}"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Center"

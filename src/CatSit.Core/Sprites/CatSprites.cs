@@ -122,40 +122,12 @@ public static class CatSprites
 
     private static SpriteFrame WalkFrame(int step)
     {
-        string[] legs = step switch
+        var legs = step switch
         {
-            0 =>
-            [
-                "...OOO....OOO.....OOO...OOO",
-                "...OOO....OOO.....OOO...OOO",
-                "...DOO....OOD.....DOO...OOD",
-                "...OOO....OOO.....OOO...OOO",
-                "...OOO....OOO.....OOO...OOO"
-            ],
-            1 =>
-            [
-                "....OOO..OOO.......OOO.OOO",
-                "....OOO..OOO.......OOO.OOO",
-                "....DOO..OOD.......DOO.OOD",
-                "....OOO..OOO.......OOO.OOO",
-                ".....OOOOOO.........OOOOO"
-            ],
-            2 =>
-            [
-                "..OOO......OOO....OOO.....OOO",
-                "..OOO......OOO....OOO.....OOO",
-                "..DOO......OOD....DOO.....OOD",
-                "..OOO......OOO....OOO.....OOO",
-                "..OOO......OOO....OOO.....OOO"
-            ],
-            _ =>
-            [
-                "..OOO...OOO......OOO..OOO",
-                "..OOO...OOO......OOO..OOO",
-                "..DOO...OOD......DOO..OOD",
-                "..OOO...OOO......OOO..OOO",
-                "...OOOOOO.........OOOOO"
-            ]
+            0 => WalkLegs(5, 10, 17, 22),
+            1 => WalkLegs(7, 9, 19, 21),
+            2 => WalkLegs(4, 11, 16, 23),
+            _ => WalkLegs(6, 9, 18, 21)
         };
         return Compose(
             Offset(7, [
@@ -178,11 +150,36 @@ public static class CatSprites
                 "..OOOOODOOODOOOODOOOOOOOOO",
                 "..OOOOOOOOOOOOOOOOOOOOOOOO",
                 "..OOOOOOOLLLLLLLLOOOOOOOOO",
-                "...OOOOOOOCCCCCCOOOOOOOOO",
-                "....OOOOOOOOOOOOOOOOOOOO"
+                "..OOOOOOOOCCCCCCOOOOOOOOOO",
+                "...OOOOOOOOOOOOOOOOOOOOOOO"
             ]),
-            Offset(23, legs),
+            Offset(22, legs),
             Offset(0, Head(false)));
+    }
+
+    private static string[] WalkLegs(int backNear, int backFar, int frontNear, int frontFar)
+    {
+        var legs = new string[7];
+        for (var row = 0; row < legs.Length; row++)
+        {
+            var line = new char[FrameWidth];
+            Array.Fill(line, '.');
+            var paw = row == legs.Length - 1;
+            DrawLeg(line, backFar, 'D');
+            DrawLeg(line, frontFar, 'D');
+            DrawLeg(line, backNear, paw ? 'L' : 'O');
+            DrawLeg(line, frontNear, paw ? 'L' : 'O');
+            legs[row] = new string(line);
+        }
+        return legs;
+    }
+
+    private static void DrawLeg(char[] line, int x, char shade)
+    {
+        for (var i = 0; i < 4; i++)
+        {
+            if (x + i >= 0 && x + i < line.Length) line[x + i] = shade;
+        }
     }
 
     private static SpriteFrame FaceFrame()

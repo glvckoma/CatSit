@@ -169,6 +169,23 @@ public class SettingsSerializerTests
     }
 
     [Fact]
+    public void WindowsIntegrationDefaults_AreOffForStartupAndOnForTray()
+    {
+        var settings = new AppSettings();
+        Assert.False(settings.StartWithWindows);
+        Assert.True(settings.CloseToTray);
+    }
+
+    [Fact]
+    public void RoundTrip_PreservesWindowsIntegrationOptions()
+    {
+        var restored = SettingsSerializer.FromJson(SettingsSerializer.ToJson(
+            new AppSettings { StartWithWindows = true, CloseToTray = false }));
+        Assert.True(restored.StartWithWindows);
+        Assert.False(restored.CloseToTray);
+    }
+
+    [Fact]
     public void Theme_FollowsBreedOrCustomFur()
     {
         var settings = new AppSettings { Breed = CatSit.Core.Sprites.CatBreed.Black };
