@@ -108,12 +108,13 @@ public class CatSpritesTests
     }
 
     [Fact]
-    public void AppIcon_HasTilePointyEarsWhiskersAndGreenEyes()
+    public void AppIcon_HasTilePointyEarsWhiskersAndClosedEyes()
     {
         var rows = AppIconArt.Icon.Rows;
         Assert.Contains(rows, row => row.Contains('B'));
         Assert.Contains(rows, row => row.Contains('S'));
-        Assert.Contains(rows, row => row.Contains('G'));
+        Assert.Contains(rows, row => row.Contains("EE"));
+        Assert.DoesNotContain(rows, row => row.Contains('W'));
         Assert.Contains('O', rows[0]);
         Assert.DoesNotContain('T', rows[0]);
     }
