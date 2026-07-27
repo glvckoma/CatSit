@@ -10,6 +10,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
 {
     private readonly SettingsStore _store;
     private bool _isLocked;
+    private string _lastInputDebug = string.Empty;
 
     public MainViewModel(SettingsStore store, AppSettings settings)
     {
@@ -36,6 +37,16 @@ public sealed class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged();
             OnPropertyChanged(nameof(StatusText));
             OnPropertyChanged(nameof(ToggleButtonText));
+        }
+    }
+
+    public string LastInputDebug
+    {
+        get => _lastInputDebug;
+        set
+        {
+            _lastInputDebug = value;
+            OnPropertyChanged();
         }
     }
 

@@ -143,5 +143,12 @@
                 </Grid>
             </StackPanel>
         </Border>
+
+        <TextBlock Text="{Binding LastInputDebug}"
+                   FontFamily="Consolas"
+                   FontSize="11"
+                   Foreground="#B0A48F"
+                   HorizontalAlignment="Center"
+                   Margin="0,8,0,0" />
     </StackPanel>
 </Window>
