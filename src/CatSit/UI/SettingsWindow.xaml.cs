@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using CatSit.Core.Audio;
 using WinForms = System.Windows.Forms;
 
@@ -87,6 +89,17 @@ public partial class SettingsWindow : Window
     }
 
     private void OnClearActivity(object sender, RoutedEventArgs e) => _viewModel.ClearActivity();
+
+    private void OnCreditClicked(object sender, RoutedEventArgs e) =>
+        Process.Start(new ProcessStartInfo("https://github.com/glvckoma") { UseShellExecute = true });
+
+    private void OnViewUpdateClicked(object sender, MouseButtonEventArgs e)
+    {
+        if (_viewModel.UpdateReleaseUrl is { } url)
+        {
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+        }
+    }
 
     private static string? PickWav()
     {

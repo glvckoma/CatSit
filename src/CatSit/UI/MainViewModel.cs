@@ -148,6 +148,24 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public string AutoUnlockText => Settings.AutoUnlockMinutes == 0 ? "Never" : $"{Settings.AutoUnlockMinutes} min";
 
+    public string VersionText => $"v{(typeof(MainViewModel).Assembly.GetName().Version?.ToString(3)) ?? "0.1.0"}";
+
+    private string? _updateAvailableTag;
+
+    public string? UpdateReleaseUrl { get; private set; }
+
+    public string UpdateAvailableText => _updateAvailableTag is null ? string.Empty : $"Update available: {_updateAvailableTag} · click to view";
+
+    public Visibility UpdateAvailableVisibility => _updateAvailableTag is null ? Visibility.Collapsed : Visibility.Visible;
+
+    public void SetUpdateAvailable(string tag, string releaseUrl)
+    {
+        _updateAvailableTag = tag;
+        UpdateReleaseUrl = releaseUrl;
+        OnPropertyChanged(nameof(UpdateAvailableText));
+        OnPropertyChanged(nameof(UpdateAvailableVisibility));
+    }
+
     public string SleepDelayText => $"{Settings.SecondsUntilSleep}s";
 
     public string VolumeText => $"{Settings.Volume}%";
@@ -253,6 +271,12 @@ public sealed class MainViewModel : INotifyPropertyChanged
     {
         get => Settings.CloseToTray;
         set { Settings.CloseToTray = value; SaveAndRaise(); }
+    }
+
+    public bool CheckForUpdatesAutomatically
+    {
+        get => Settings.CheckForUpdatesAutomatically;
+        set { Settings.CheckForUpdatesAutomatically = value; SaveAndRaise(); }
     }
 
     public int Sensitivity

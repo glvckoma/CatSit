@@ -1,0 +1,40 @@
+<Window x:Class="CatSit.UI.UpdateWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="clr-namespace:CatSit.UI"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        Title="CatSit Update"
+        Width="400"
+        SizeToContent="Height"
+        ResizeMode="NoResize"
+        WindowStyle="None"
+        Background="{StaticResource Backdrop}"
+        WindowStartupLocation="CenterOwner">
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="46" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+    <Border BorderBrush="{StaticResource Stroke}" BorderThickness="1">
+        <DockPanel>
+            <ui:WindowHeader DockPanel.Dock="Top" HeaderTitle="Update available" />
+            <StackPanel Margin="22,18,22,20">
+                <Border Style="{StaticResource CardBorder}">
+                    <StackPanel>
+                        <TextBlock Text="A new version of CatSit is ready" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,6" />
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap">
+                            <Run Text="You have" />
+                            <Run Text="{Binding CurrentVersionText, RelativeSource={RelativeSource AncestorType=Window}}" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" />
+                            <Run Text="· latest is" />
+                            <Run Text="{Binding LatestVersionText, RelativeSource={RelativeSource AncestorType=Window}}" FontWeight="SemiBold" Foreground="{StaticResource Accent}" />
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <Button Content="Download now" Style="{StaticResource PrimaryButton}" Margin="0,16,0,8" Click="OnDownloadNow" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button Content="Remind me later" Style="{StaticResource GhostButton}" Click="OnRemindLater" />
+                    <Button Content="Skip this version" Style="{StaticResource GhostButton}" Margin="10,0,0,0" Click="OnSkipVersion" />
+                </StackPanel>
+            </StackPanel>
+        </DockPanel>
+    </Border>
+</Window>

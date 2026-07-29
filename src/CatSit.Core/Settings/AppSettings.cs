@@ -26,6 +26,8 @@ public sealed class AppSettings
     public int AutoUnlockMinutes { get; set; }
     public bool StartWithWindows { get; set; }
     public bool CloseToTray { get; set; } = true;
+    public bool CheckForUpdatesAutomatically { get; set; } = true;
+    public string? LastSkippedUpdateTag { get; set; }
 
     public bool SoundsEnabled { get; set; } = true;
     public int Volume { get; set; } = 70;

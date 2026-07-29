@@ -1,12 +1,17 @@
+using System.Diagnostics;
+using System.Net.Http;
 using System.Windows;
 using CatSit.Audio;
 using CatSit.Core.Detection;
 using CatSit.Core.Learning;
+using CatSit.Core.Settings;
+using CatSit.Core.Updates;
 using CatSit.Interop;
 using CatSit.Locking;
 using CatSit.Overlay;
 using CatSit.Settings;
 using CatSit.UI;
+using CatSit.Updates;
 
 namespace CatSit;
 
@@ -14,6 +19,8 @@ public partial class App : Application
 {
     private const string MutexName = "CatSit.SingleInstance";
     private const string ShowEventName = "CatSit.ShowWindow";
+
+    private static readonly HttpClient UpdateHttpClient = new() { Timeout = TimeSpan.FromSeconds(6) };
 
     private Mutex? _instanceMutex;
     private EventWaitHandle? _showEvent;
@@ -128,6 +135,41 @@ public partial class App : Application
         MainWindow = window;
         StartShowEventListener();
         window.Show();
+
+        _ = CheckForUpdatesAsync(viewModel, window, store, settings);
+    }
+
+    private async Task CheckForUpdatesAsync(MainViewModel viewModel, Window owner, SettingsStore store, AppSettings settings)
+    {
+        if (!settings.CheckForUpdatesAutomatically) return;
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(3));
+            var current = typeof(App).Assembly.GetName().Version ?? new Version(0, 1, 0);
+            var outcome = await UpdateChecker.CheckLatestAsync(UpdateHttpClient, current, settings.LastSkippedUpdateTag);
+            if (outcome is null) return;
+            if (outcome.Availability != UpdateAvailability.NewVersionAvailable) return;
+
+            await Dispatcher.InvokeAsync(() =>
+            {
+                viewModel.SetUpdateAvailable(outcome.LatestTag, outcome.ReleaseHtmlUrl);
+                var dialog = new UpdateWindow(viewModel.VersionText, outcome.LatestTag) { Owner = owner };
+                dialog.ShowDialog();
+                switch (dialog.Choice)
+                {
+                    case UpdateChoice.DownloadNow:
+                        Process.Start(new ProcessStartInfo(outcome.ReleaseHtmlUrl) { UseShellExecute = true });
+                        break;
+                    case UpdateChoice.SkipVersion:
+                        settings.LastSkippedUpdateTag = outcome.LatestTag;
+                        store.Save(settings);
+                        break;
+                }
+            });
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or InvalidOperationException)
+        {
+        }
     }
 
     protected override void OnExit(ExitEventArgs e)

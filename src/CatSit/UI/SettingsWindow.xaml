@@ -111,7 +111,8 @@
                     <TextBlock Text="Windows" Style="{StaticResource SectionTitle}" />
                     <CheckBox Content="Start CatSit when Windows starts" IsChecked="{Binding StartWithWindows}" />
                     <CheckBox Content="Closing the window keeps CatSit in the tray" IsChecked="{Binding CloseToTray}" />
-                    <TextBlock Text="With this off, closing the window exits CatSit and stops guarding."
+                    <CheckBox Content="Check for updates automatically" IsChecked="{Binding CheckForUpdatesAutomatically}" />
+                    <TextBlock Text="With Close-to-tray off, closing the window exits CatSit and stops guarding."
                                Style="{StaticResource Caption}" Margin="0,2,0,18" TextWrapping="Wrap" MaxWidth="430" HorizontalAlignment="Left" />
 
                     <TextBlock Text="Behavior" Style="{StaticResource SectionTitle}" />
@@ -124,6 +125,17 @@
                                 Value="{Binding AutoUnlockMinutes}" VerticalAlignment="Center" />
                         <TextBlock Text="{Binding AutoUnlockText}" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="12,0,0,0" Width="60" />
                     </StackPanel>
+
+                    <TextBlock Text="About" Style="{StaticResource SectionTitle}" Margin="0,20,0,10" />
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding VersionText}" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                        <TextBlock Text=" · " Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                        <Button Content="Made by glvckoma" Style="{StaticResource GhostButton}" Click="OnCreditClicked" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding UpdateAvailableText}"
+                               Style="{StaticResource Caption}" Foreground="{StaticResource Accent}"
+                               Visibility="{Binding UpdateAvailableVisibility}" Cursor="Hand"
+                               Margin="0,8,0,0" MouseLeftButtonUp="OnViewUpdateClicked" />
                 </StackPanel>
 
                 <StackPanel x:Name="DetectionPanel" Visibility="Collapsed">

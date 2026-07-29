@@ -483,4 +483,5 @@ $RECYCLE.BIN/
 # Vim temporary swap files
 *.swp
 
-publish/
+# CatSit-specific build output
+installer/Output/

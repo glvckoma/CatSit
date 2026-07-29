@@ -186,6 +186,23 @@ public class SettingsSerializerTests
     }
 
     [Fact]
+    public void RoundTrip_PreservesUpdateCheckOptions()
+    {
+        var restored = SettingsSerializer.FromJson(SettingsSerializer.ToJson(
+            new AppSettings { CheckForUpdatesAutomatically = false, LastSkippedUpdateTag = "v0.2.0" }));
+        Assert.False(restored.CheckForUpdatesAutomatically);
+        Assert.Equal("v0.2.0", restored.LastSkippedUpdateTag);
+    }
+
+    [Fact]
+    public void Defaults_EnableUpdateChecksWithNoSkippedVersion()
+    {
+        var settings = new AppSettings();
+        Assert.True(settings.CheckForUpdatesAutomatically);
+        Assert.Null(settings.LastSkippedUpdateTag);
+    }
+
+    [Fact]
     public void Theme_FollowsBreedOrCustomFur()
     {
         var settings = new AppSettings { Breed = CatSit.Core.Sprites.CatBreed.Black };
