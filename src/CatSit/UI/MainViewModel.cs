@@ -25,6 +25,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private readonly ExclusionList _exclusions;
     private readonly CatClassifier _classifier;
     private bool _isLocked;
+    private string _persistenceErrorText = string.Empty;
+    private Func<PersistenceResult>? _retryPersistence;
+    private bool _isCheckingForUpdates;
+    private string _updateCheckStatus = string.Empty;
 
     public MainViewModel(
         SettingsStore store,
@@ -43,6 +47,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         _classifier = classifier;
         Settings = settings;
         ToggleLockCommand = new RelayCommand(() => ToggleRequested?.Invoke());
+        RetryPersistenceCommand = new RelayCommand(RetryPersistence, () => _retryPersistence is not null);
         Breeds = [.. Enum.GetValues<CatBreed>().Select(b => new NamedOption<CatBreed>(CatTheme.DisplayName(b), b))];
         Edges =
         [
@@ -64,8 +69,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public event Action? AppearanceChanged;
     public event Action<string, TriggerVerdict>? VerdictReported;
     public event Action? ActivityCleared;
+    public event Func<Task>? ManualUpdateRequested;
 
     public ICommand ToggleLockCommand { get; }
+    public RelayCommand RetryPersistenceCommand { get; }
 
     public IReadOnlyList<NamedOption<CatBreed>> Breeds { get; }
     public IReadOnlyList<NamedOption<EntryEdge>> Edges { get; }
@@ -142,8 +149,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public string LearningStatus => Settings.LearningEnabled
         ? _classifier.IsActive
-            ? $"Learning from {_classifier.SampleCount} labeled trigger(s)."
-            : $"Needs {CatClassifier.MinSamplesBeforeVeto} labeled triggers before it starts filtering. Label them under Activity."
+            ? $"Learning from {_classifier.SampleCount} labels: {_classifier.CatSampleCount} cats and {_classifier.FalseAlarmSampleCount} false alarms."
+            : $"Needs 6 labels, including at least 2 cats and 2 false alarms. Current: {_classifier.CatSampleCount} cats and {_classifier.FalseAlarmSampleCount} false alarms."
         : "Learning is off, only the sensitivity rules apply.";
 
     public string AutoUnlockText => Settings.AutoUnlockMinutes == 0 ? "Never" : $"{Settings.AutoUnlockMinutes} min";
@@ -157,6 +164,56 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public string UpdateAvailableText => _updateAvailableTag is null ? string.Empty : $"Update available: {_updateAvailableTag} · click to view";
 
     public Visibility UpdateAvailableVisibility => _updateAvailableTag is null ? Visibility.Collapsed : Visibility.Visible;
+
+    public bool IsCheckingForUpdates
+    {
+        get => _isCheckingForUpdates;
+        set
+        {
+            if (_isCheckingForUpdates == value) return;
+            _isCheckingForUpdates = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CanCheckForUpdates));
+        }
+    }
+
+    public bool CanCheckForUpdates => !IsCheckingForUpdates;
+
+    public string UpdateCheckStatus
+    {
+        get => _updateCheckStatus;
+        set
+        {
+            if (_updateCheckStatus == value) return;
+            _updateCheckStatus = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(UpdateCheckStatusVisibility));
+        }
+    }
+
+    public Visibility UpdateCheckStatusVisibility => string.IsNullOrEmpty(UpdateCheckStatus)
+        ? Visibility.Collapsed
+        : Visibility.Visible;
+
+    public string PersistenceErrorText
+    {
+        get => _persistenceErrorText;
+        private set
+        {
+            if (_persistenceErrorText == value) return;
+            _persistenceErrorText = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(PersistenceErrorVisibility));
+        }
+    }
+
+    public Visibility PersistenceErrorVisibility => string.IsNullOrEmpty(PersistenceErrorText)
+        ? Visibility.Collapsed
+        : Visibility.Visible;
+
+    public Visibility PersistenceRetryVisibility => _retryPersistence is null
+        ? Visibility.Collapsed
+        : Visibility.Visible;
 
     public void SetUpdateAvailable(string tag, string releaseUrl)
     {
@@ -211,7 +268,47 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public bool DetectionEnabled
     {
         get => Settings.DetectionEnabled;
-        set { Settings.DetectionEnabled = value; SaveAndRaise(); OnPropertyChanged(nameof(DetectionSummary)); }
+        set
+        {
+            if (value && !Settings.DetectKeyboardInput && !Settings.DetectMouseInput)
+            {
+                Settings.DetectKeyboardInput = true;
+                OnPropertyChanged(nameof(DetectKeyboardInput));
+            }
+            Settings.DetectionEnabled = value;
+            SaveAndRaise();
+            OnPropertyChanged(nameof(DetectionSummary));
+        }
+    }
+
+    public bool DetectKeyboardInput
+    {
+        get => Settings.DetectKeyboardInput;
+        set
+        {
+            if (!value && Settings.DetectionEnabled && !Settings.DetectMouseInput)
+            {
+                OnPropertyChanged();
+                return;
+            }
+            Settings.DetectKeyboardInput = value;
+            SaveAndRaise();
+        }
+    }
+
+    public bool DetectMouseInput
+    {
+        get => Settings.DetectMouseInput;
+        set
+        {
+            if (!value && Settings.DetectionEnabled && !Settings.DetectKeyboardInput)
+            {
+                OnPropertyChanged();
+                return;
+            }
+            Settings.DetectMouseInput = value;
+            SaveAndRaise();
+        }
     }
 
     public bool WarnOnly
@@ -436,6 +533,46 @@ public sealed class MainViewModel : INotifyPropertyChanged
         RefreshActivity();
     }
 
+    public void ResetLearning()
+    {
+        _classifier.Reset();
+        _exclusions.Clear();
+        Settings.ExcludedSignatures = [];
+        _log.ResetVerdicts();
+        SettingsChanged?.Invoke();
+        ActivityCleared?.Invoke();
+        RefreshActivity();
+    }
+
+    public void RestoreDefaults()
+    {
+        Settings.RestoreDefaults();
+        StartupRegistration.Apply(false);
+        _sprites.Rebuild(Settings.Theme());
+        _audio.Rebuild();
+        ReportPersistence(_store.Save(Settings), () => _store.Save(Settings));
+        OnPropertyChanged(string.Empty);
+        SettingsChanged?.Invoke();
+        AppearanceChanged?.Invoke();
+    }
+
+    public Task CheckForUpdatesManuallyAsync() => ManualUpdateRequested?.Invoke() ?? Task.CompletedTask;
+
+    public void ReportPersistence(PersistenceResult result, Func<PersistenceResult>? retry = null)
+    {
+        if (result.Success)
+        {
+            if (_retryPersistence is null) PersistenceErrorText = string.Empty;
+        }
+        else
+        {
+            PersistenceErrorText = result.ErrorMessage;
+            _retryPersistence = retry;
+        }
+        OnPropertyChanged(nameof(PersistenceRetryVisibility));
+        RetryPersistenceCommand.RaiseCanExecuteChanged();
+    }
+
     public void RefreshActivity()
     {
         Triggers.Clear();
@@ -462,7 +599,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     {
         _exclusions.Remove(signature);
         Settings.ExcludedSignatures = [.. _exclusions.Signatures];
-        _store.Save(Settings);
+        ReportPersistence(_store.Save(Settings), () => _store.Save(Settings));
         SettingsChanged?.Invoke();
         RefreshActivity();
     }
@@ -487,9 +624,26 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     private void SaveAndRaise([CallerMemberName] string? name = null)
     {
-        _store.Save(Settings);
+        ReportPersistence(_store.Save(Settings), () => _store.Save(Settings));
         OnPropertyChanged(name);
         SettingsChanged?.Invoke();
+    }
+
+    private void RetryPersistence()
+    {
+        if (_retryPersistence is null) return;
+        var retry = _retryPersistence;
+        var result = retry();
+        if (!result.Success)
+        {
+            ReportPersistence(result, retry);
+            return;
+        }
+
+        PersistenceErrorText = string.Empty;
+        _retryPersistence = null;
+        OnPropertyChanged(nameof(PersistenceRetryVisibility));
+        RetryPersistenceCommand.RaiseCanExecuteChanged();
     }
 
     private void OnPropertyChanged([CallerMemberName] string? name = null) =>

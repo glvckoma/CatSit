@@ -1,13 +1,17 @@
 # Building the installer locally
 
-Requires [Inno Setup 6](https://jrsoftware.org/isinfo.php) (`ISCC.exe` on your PATH or use the full path below).
+Install the .NET 10 SDK and [Inno Setup 6.6 or later](https://jrsoftware.org/isinfo.php), then run:
 
 ```powershell
-dotnet publish ..\src\CatSit\CatSit.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o ..\src\CatSit\bin\publish
-
-& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" CatSit.iss /DMyAppVersion=0.1.0
+.\installer\Build-Installer.ps1
 ```
 
-Output lands in `installer\Output\CatSit-Setup-0.1.0.exe`.
+To override the version from `CatSit.csproj`:
 
-The `AppId` GUID in `CatSit.iss` is permanent and must never change — it's what lets future versions upgrade in place instead of creating a duplicate Add/Remove Programs entry.
+```powershell
+.\installer\Build-Installer.ps1 -Version 0.2.0
+```
+
+The script publishes a self-contained Windows x64 build and creates `installer\Output\CatSit-Setup-<version>.exe`.
+
+The `AppId` GUID in `CatSit.iss` is permanent. It lets future versions upgrade in place and reuse the existing Add or Remove Programs entry.

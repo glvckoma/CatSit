@@ -27,23 +27,20 @@ public sealed class TriggerViewModel
         get
         {
             var when = Record.TimestampUtc.ToLocalTime().ToString("MMM d, h:mm tt");
-            var action = Record.Locked ? "input locked" : "warned only";
+            var action = Record.SuppressedByLearning
+                ? "prevented by learning"
+                : Record.Locked ? "input locked" : "warned only";
             return $"{when} · {action}";
         }
     }
 
-    public string VerdictText => Record.Verdict switch
-    {
-        TriggerVerdict.ConfirmedCat => "Confirmed cat",
-        TriggerVerdict.FalseAlarm => "Ignored from now on",
-        _ => string.Empty
-    };
+    public string ConfirmButtonText => Record.Verdict == TriggerVerdict.ConfirmedCat
+        ? "Cat (selected)"
+        : "Was a cat";
 
-    public Visibility VerdictVisibility =>
-        Record.Verdict == TriggerVerdict.Unreviewed ? Visibility.Collapsed : Visibility.Visible;
-
-    public Visibility ButtonsVisibility =>
-        Record.Verdict == TriggerVerdict.Unreviewed ? Visibility.Visible : Visibility.Collapsed;
+    public string RejectButtonText => Record.Verdict == TriggerVerdict.FalseAlarm
+        ? "Not a cat (selected)"
+        : "Not a cat";
 }
 
 public sealed class ExclusionViewModel

@@ -10,7 +10,12 @@ public sealed class TriggerLog
 
     public IReadOnlyList<TriggerRecord> Entries => _entries;
 
-    public TriggerRecord Add(CatSignal signal, bool locked, DateTimeOffset timestampUtc, string id)
+    public TriggerRecord Add(
+        CatSignal signal,
+        bool locked,
+        DateTimeOffset timestampUtc,
+        string id,
+        bool suppressedByLearning = false)
     {
         var record = new TriggerRecord
         {
@@ -19,6 +24,7 @@ public sealed class TriggerLog
             Rule = signal.Rule,
             Signature = signal.Signature,
             Locked = locked,
+            SuppressedByLearning = suppressedByLearning,
             Features = signal.Features
         };
         _entries.Insert(0, record);
@@ -42,4 +48,12 @@ public sealed class TriggerLog
     }
 
     public void Clear() => _entries.Clear();
+
+    public void ResetVerdicts()
+    {
+        for (var i = 0; i < _entries.Count; i++)
+        {
+            _entries[i] = _entries[i] with { Verdict = TriggerVerdict.Unreviewed };
+        }
+    }
 }

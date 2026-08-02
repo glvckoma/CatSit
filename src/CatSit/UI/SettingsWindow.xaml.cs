@@ -90,6 +90,31 @@ public partial class SettingsWindow : Window
 
     private void OnClearActivity(object sender, RoutedEventArgs e) => _viewModel.ClearActivity();
 
+    private void OnResetLearning(object sender, RoutedEventArgs e)
+    {
+        var result = MessageBox.Show(
+            this,
+            "This clears learned samples and ignored combinations. Recent triggers will remain and become unreviewed.",
+            "Reset learned behavior?",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+        if (result == MessageBoxResult.Yes) _viewModel.ResetLearning();
+    }
+
+    private void OnRestoreDefaults(object sender, RoutedEventArgs e)
+    {
+        var result = MessageBox.Show(
+            this,
+            "Restore CatSit settings to their defaults? Activity history and learned behavior will be kept.",
+            "Restore default settings?",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+        if (result == MessageBoxResult.Yes) _viewModel.RestoreDefaults();
+    }
+
+    private async void OnCheckForUpdates(object sender, RoutedEventArgs e) =>
+        await _viewModel.CheckForUpdatesManuallyAsync();
+
     private void OnCreditClicked(object sender, RoutedEventArgs e) =>
         Process.Start(new ProcessStartInfo("https://github.com/glvckoma") { UseShellExecute = true });
 

@@ -15,7 +15,18 @@ public static class SettingsSerializer
 
     public static AppSettings FromJson(string? json)
     {
-        if (string.IsNullOrWhiteSpace(json)) return new AppSettings();
+        TryFromJson(json, out var settings);
+        return settings;
+    }
+
+    public static bool TryFromJson(string? json, out AppSettings settings)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            settings = new AppSettings();
+            return true;
+        }
+
         AppSettings? parsed;
         try
         {
@@ -23,9 +34,16 @@ public static class SettingsSerializer
         }
         catch (JsonException)
         {
-            return new AppSettings();
+            settings = new AppSettings();
+            return false;
         }
-        if (parsed is null) return new AppSettings();
+
+        if (parsed is null)
+        {
+            settings = new AppSettings();
+            return false;
+        }
+
         parsed.Sensitivity = Math.Clamp(parsed.Sensitivity, 1, 10);
         parsed.SecondsUntilSleep = Math.Clamp(parsed.SecondsUntilSleep, 3, 60);
         parsed.Volume = Math.Clamp(parsed.Volume, 0, 100);
@@ -33,10 +51,15 @@ public static class SettingsSerializer
         parsed.AutoUnlockMinutes = Math.Clamp(parsed.AutoUnlockMinutes, 0, 60);
         parsed.ExcludedSignatures ??= [];
         if (!parsed.LockKeyboard && !parsed.LockMouse) parsed.LockKeyboard = true;
+        if (parsed.DetectionEnabled && !parsed.DetectKeyboardInput && !parsed.DetectMouseInput)
+        {
+            parsed.DetectKeyboardInput = true;
+        }
         if (parsed.ToggleHotkey is null || parsed.ToggleHotkey.Vk == 0)
         {
             parsed.ToggleHotkey = new AppSettings().ToggleHotkey;
         }
-        return parsed;
+        settings = parsed;
+        return true;
     }
 }

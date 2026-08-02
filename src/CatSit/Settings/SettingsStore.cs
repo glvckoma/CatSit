@@ -1,4 +1,5 @@
 using System.IO;
+using System.Security;
 using CatSit.Core.Settings;
 
 namespace CatSit.Settings;
@@ -7,40 +8,46 @@ public sealed class SettingsStore
 {
     private readonly string _path;
 
-    public SettingsStore()
+    public SettingsStore(string? path = null)
     {
-        var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CatSit");
-        Directory.CreateDirectory(dir);
-        _path = Path.Combine(dir, "settings.json");
+        _path = path ?? Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "CatSit",
+            "settings.json");
     }
 
-    public AppSettings Load()
+    public PersistenceLoadResult<AppSettings> Load()
     {
         try
         {
-            return SettingsSerializer.FromJson(File.Exists(_path) ? File.ReadAllText(_path) : null);
+            if (!File.Exists(_path))
+            {
+                return new PersistenceLoadResult<AppSettings>(new AppSettings(), PersistenceResult.Ok());
+            }
+
+            var valid = SettingsSerializer.TryFromJson(File.ReadAllText(_path), out var settings);
+            return valid
+                ? new PersistenceLoadResult<AppSettings>(settings, PersistenceResult.Ok())
+                : new PersistenceLoadResult<AppSettings>(settings, PersistenceResult.Failed(
+                    "CatSit could not read your settings file, so default settings were loaded."));
         }
-        catch (IOException)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or SecurityException)
         {
-            return new AppSettings();
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return new AppSettings();
+            return new PersistenceLoadResult<AppSettings>(new AppSettings(), PersistenceResult.Failed(
+                "CatSit could not read your settings file, so default settings were loaded."));
         }
     }
 
-    public void Save(AppSettings settings)
+    public PersistenceResult Save(AppSettings settings)
     {
         try
         {
-            File.WriteAllText(_path, SettingsSerializer.ToJson(settings));
+            return AtomicJsonFile.Write(_path, SettingsSerializer.ToJson(settings), "your settings");
         }
-        catch (IOException)
+        catch (Exception exception) when (exception is System.Text.Json.JsonException
+            or NotSupportedException or InvalidOperationException)
         {
-        }
-        catch (UnauthorizedAccessException)
-        {
+            return PersistenceResult.Failed("CatSit could not save your settings. Try again or restart CatSit.");
         }
     }
 }

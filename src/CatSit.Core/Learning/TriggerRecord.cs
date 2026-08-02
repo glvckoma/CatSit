@@ -16,6 +16,7 @@ public sealed record TriggerRecord
     public CatRule Rule { get; init; }
     public string Signature { get; init; } = string.Empty;
     public bool Locked { get; init; }
+    public bool SuppressedByLearning { get; init; }
     public TriggerVerdict Verdict { get; init; } = TriggerVerdict.Unreviewed;
     public DetectionFeatures Features { get; init; } = new();
 

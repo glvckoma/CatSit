@@ -9,6 +9,7 @@ namespace CatSit.Interop;
 public sealed class InputHookManager : IDisposable
 {
     private readonly HookThread _hookThread = new();
+    private readonly BlockedMouseButtonState _blockedMouseButtons = new();
     private readonly Dispatcher _appDispatcher;
     private NativeMethods.HookProc? _keyboardProc;
     private NativeMethods.HookProc? _mouseProc;
@@ -18,6 +19,7 @@ public sealed class InputHookManager : IDisposable
     private volatile bool _blockMouse;
     private volatile bool _hotkeyLocksKeyboard;
     private volatile bool _hotkeyLocksMouse;
+    private volatile bool _allowMouseMovementWhileBlocked;
     private volatile HotkeyCombo? _toggleHotkey;
     private bool _hotkeyTriggerDown;
     private bool _started;
@@ -30,6 +32,7 @@ public sealed class InputHookManager : IDisposable
 
     public event Action<KeyEventInfo>? KeyEvent;
     public event Action<MouseEventInfo>? MouseEvent;
+    public event Action<int, int>? BlockedLeftClick;
     public event Action<bool>? HotkeyToggled;
 
     public bool BlockKeyboard
@@ -54,6 +57,12 @@ public sealed class InputHookManager : IDisposable
     {
         get => _hotkeyLocksMouse;
         set => _hotkeyLocksMouse = value;
+    }
+
+    public bool AllowMouseMovementWhileBlocked
+    {
+        get => _allowMouseMovementWhileBlocked;
+        set => _allowMouseMovementWhileBlocked = value;
     }
 
     public HotkeyCombo? ToggleHotkey
@@ -167,14 +176,26 @@ public sealed class InputHookManager : IDisposable
         {
             var isDown = msg is NativeMethods.WM_LBUTTONDOWN or NativeMethods.WM_RBUTTONDOWN
                 or NativeMethods.WM_MBUTTONDOWN or NativeMethods.WM_XBUTTONDOWN;
+            var blocking = _blockMouse && !injected;
+            var swallow = !injected && _blockedMouseButtons.ShouldSwallow(button.Value, isDown, blocking);
             var handler = MouseEvent;
             if (handler is not null)
             {
                 var info = new MouseEventInfo(button.Value, isDown, Environment.TickCount64, injected);
                 _appDispatcher.BeginInvoke(handler, info);
             }
+            if (blocking)
+            {
+                if (isDown && button == MouseButton.Left)
+                {
+                    var blockedClick = BlockedLeftClick;
+                    if (blockedClick is not null) _appDispatcher.BeginInvoke(blockedClick, data.pt.X, data.pt.Y);
+                }
+            }
+            if (swallow) return (IntPtr)1;
         }
-        if (_blockMouse && !injected) return (IntPtr)1;
+        if (_blockMouse && !injected
+            && (msg != NativeMethods.WM_MOUSEMOVE || !_allowMouseMovementWhileBlocked)) return (IntPtr)1;
         return NativeMethods.CallNextHookEx(IntPtr.Zero, nCode, wParam, lParam);
     }
 }

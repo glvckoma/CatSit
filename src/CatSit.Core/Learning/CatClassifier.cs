@@ -2,12 +2,18 @@ using CatSit.Core.Detection;
 
 namespace CatSit.Core.Learning;
 
-public sealed record LabeledSample(double[] Features, bool IsCat);
+public sealed record LabeledSample
+{
+    public string Id { get; init; } = string.Empty;
+    public double[] Features { get; init; } = [];
+    public bool IsCat { get; init; }
+}
 
 public sealed class CatClassifier
 {
     public const int FeatureCount = 8;
-    public const int MinSamplesBeforeVeto = 3;
+    public const int MinSamplesBeforeVeto = 6;
+    public const int MinSamplesPerClass = 2;
     public const int MaxSamples = 60;
 
     private const double SuppressBelowScore = 0.35;
@@ -20,12 +26,17 @@ public sealed class CatClassifier
     private readonly List<LabeledSample> _samples = [];
     private double[] _weights = [.. InitialWeights];
     private double _bias = InitialBias;
+    private int _generatedId;
 
     public IReadOnlyList<double> Weights => _weights;
     public double Bias => _bias;
     public int SampleCount => _samples.Count;
+    public int CatSampleCount => _samples.Count(sample => sample.IsCat);
+    public int FalseAlarmSampleCount => _samples.Count(sample => !sample.IsCat);
     public IReadOnlyList<LabeledSample> Samples => _samples;
-    public bool IsActive => _samples.Count >= MinSamplesBeforeVeto;
+    public bool IsActive => SampleCount >= MinSamplesBeforeVeto
+        && CatSampleCount >= MinSamplesPerClass
+        && FalseAlarmSampleCount >= MinSamplesPerClass;
 
     public double Score(DetectionFeatures features) => Sigmoid(Logit(features.ToVector()));
 
@@ -34,21 +45,53 @@ public sealed class CatClassifier
 
     public void Learn(DetectionFeatures features, bool isCat)
     {
-        _samples.Add(new LabeledSample(features.ToVector(), isCat));
-        if (_samples.Count > MaxSamples) _samples.RemoveRange(0, _samples.Count - MaxSamples);
+        string id;
+        do
+        {
+            id = $"generated-{_generatedId++}";
+        }
+        while (_samples.Any(sample => sample.Id == id));
+        SetLabel(id, features, isCat);
+    }
+
+    public void SetLabel(string id, DetectionFeatures features, bool isCat)
+    {
+        if (string.IsNullOrWhiteSpace(id)) throw new ArgumentException("A sample ID is required.", nameof(id));
+        var sample = new LabeledSample { Id = id, Features = features.ToVector(), IsCat = isCat };
+        var index = _samples.FindIndex(existing => existing.Id == id);
+        if (index >= 0) _samples[index] = sample;
+        else _samples.Add(sample);
+        TrimSamples();
         Train();
     }
 
-    public void Load(IEnumerable<double> weights, double bias, IEnumerable<LabeledSample> samples)
+    public bool RemoveLabel(string id)
     {
-        var loaded = weights.ToArray();
-        if (loaded.Length == FeatureCount)
+        var removed = _samples.RemoveAll(sample => sample.Id == id) > 0;
+        if (removed) Train();
+        return removed;
+    }
+
+    public void LoadSamples(IEnumerable<LabeledSample>? samples)
+    {
+        Reset();
+        if (samples is null) return;
+
+        var generatedIndex = 0;
+        var valid = new List<LabeledSample>();
+        foreach (var sample in samples)
         {
-            _weights = loaded;
-            _bias = bias;
+            if (sample is null || !IsValidVector(sample.Features)) continue;
+            var id = string.IsNullOrWhiteSpace(sample.Id) ? $"legacy-{generatedIndex}" : sample.Id;
+            generatedIndex++;
+            valid.RemoveAll(existing => existing.Id == id);
+            valid.Add(sample with { Id = id, Features = [.. sample.Features] });
         }
+
         _samples.Clear();
-        _samples.AddRange(samples.Where(sample => sample.Features.Length == FeatureCount).TakeLast(MaxSamples));
+        _samples.AddRange(valid.TakeLast(MaxSamples));
+        _generatedId = generatedIndex;
+        Train();
     }
 
     public void Reset()
@@ -56,6 +99,12 @@ public sealed class CatClassifier
         _weights = [.. InitialWeights];
         _bias = InitialBias;
         _samples.Clear();
+        _generatedId = 0;
+    }
+
+    private void TrimSamples()
+    {
+        if (_samples.Count > MaxSamples) _samples.RemoveRange(0, _samples.Count - MaxSamples);
     }
 
     private void Train()
@@ -83,6 +132,9 @@ public sealed class CatClassifier
         for (var i = 0; i < FeatureCount; i++) sum += _weights[i] * vector[i];
         return sum;
     }
+
+    private static bool IsValidVector(double[]? vector) => vector is { Length: FeatureCount }
+        && vector.All(value => double.IsFinite(value) && value is >= 0 and <= 1);
 
     private static double Sigmoid(double x) => 1.0 / (1.0 + Math.Exp(-x));
 }

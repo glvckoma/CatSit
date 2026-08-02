@@ -34,26 +34,31 @@ public partial class App : Application
     private TriggerLog? _log;
     private CatClassifier? _classifier;
     private bool _trayHintShown;
+    private bool _updateCheckInProgress;
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        var background = AppLaunchOptions.Parse(e.Args).Background;
         _instanceMutex = new Mutex(true, MutexName, out var isFirstInstance);
         if (!isFirstInstance)
         {
-            SignalExistingInstance();
+            if (!background) SignalExistingInstance();
             Shutdown();
             return;
         }
+        _showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ShowEventName);
 
         var store = new SettingsStore();
-        var settings = store.Load();
+        var settingsLoad = store.Load();
+        var settings = settingsLoad.Value;
         _activityStore = new ActivityStore();
-        var activity = _activityStore.Load();
+        var activityLoad = _activityStore.Load();
+        var activity = activityLoad.Value;
         _log = new TriggerLog();
         _log.Load(activity.Triggers);
         _classifier = new CatClassifier();
-        _classifier.Load(activity.Weights, activity.Bias, activity.Samples);
+        _classifier.LoadSamples(activity.Samples);
         var exclusions = new ExclusionList();
         exclusions.Load(settings.ExcludedSignatures);
 
@@ -86,10 +91,9 @@ public partial class App : Application
         viewModel.VerdictReported += (id, verdict) =>
         {
             controller.ReportVerdict(id, verdict);
-            store.Save(settings);
-            activityStore.Save(log, classifier);
+            viewModel.ReportPersistence(PersistFeedback(), PersistFeedback);
         };
-        viewModel.ActivityCleared += () => activityStore.Save(log, classifier);
+        viewModel.ActivityCleared += () => viewModel.ReportPersistence(PersistFeedback(), PersistFeedback);
 
         controller.StateChanged += (locked, reason) =>
         {
@@ -104,9 +108,9 @@ public partial class App : Application
         };
         controller.TriggerRecorded += record =>
         {
-            activityStore.Save(log, classifier);
+            viewModel.ReportPersistence(activityStore.Save(log, classifier), () => activityStore.Save(log, classifier));
             viewModel.RefreshActivity();
-            if (!record.Locked && settings.ShowTrayAlerts)
+            if (!record.Locked && !record.SuppressedByLearning && settings.ShowTrayAlerts)
             {
                 tray.Notify("Cat detected", "Warn-only mode, input is still active.");
             }
@@ -114,6 +118,12 @@ public partial class App : Application
 
         overlay.CatClicked += () =>
         {
+            audio.PlayCat();
+            controller.Unlock(LockReason.CatClicked);
+        };
+        _hooks.BlockedLeftClick += (x, y) =>
+        {
+            if (!settings.ClickToDismiss || !controller.IsLocked || !overlay.ContainsCatScreenPoint(x, y)) return;
             audio.PlayCat();
             controller.Unlock(LockReason.CatClicked);
         };
@@ -129,46 +139,90 @@ public partial class App : Application
         tray.ToggleRequested += controller.Toggle;
         tray.OpenRequested += window.ShowFromTray;
         tray.ExitRequested += Shutdown;
+        viewModel.ManualUpdateRequested += () => CheckForUpdatesAsync(
+            viewModel,
+            (Window?)_settingsWindow ?? window,
+            store,
+            settings,
+            manual: true,
+            showDialog: true);
+
+        if (!settingsLoad.Status.Success) viewModel.ReportPersistence(settingsLoad.Status);
+        if (!activityLoad.Status.Success) viewModel.ReportPersistence(activityLoad.Status);
 
         StartupRegistration.Sync(settings.StartWithWindows);
         window.Icon = AppIcon.Image;
         MainWindow = window;
         StartShowEventListener();
-        window.Show();
+        if (!background) window.Show();
 
-        _ = CheckForUpdatesAsync(viewModel, window, store, settings);
+        _ = CheckForUpdatesAsync(viewModel, window, store, settings, manual: false, showDialog: !background);
+
+        PersistenceResult PersistFeedback()
+        {
+            var settingsResult = store.Save(settings);
+            return settingsResult.Success ? activityStore.Save(log, classifier) : settingsResult;
+        }
     }
 
-    private async Task CheckForUpdatesAsync(MainViewModel viewModel, Window owner, SettingsStore store, AppSettings settings)
+    private async Task CheckForUpdatesAsync(
+        MainViewModel viewModel,
+        Window owner,
+        SettingsStore store,
+        AppSettings settings,
+        bool manual,
+        bool showDialog)
     {
-        if (!settings.CheckForUpdatesAutomatically) return;
+        if ((!manual && !settings.CheckForUpdatesAutomatically) || _updateCheckInProgress) return;
+        _updateCheckInProgress = true;
+        viewModel.IsCheckingForUpdates = true;
+        if (manual) viewModel.UpdateCheckStatus = "Checking for updates...";
         try
         {
-            await Task.Delay(TimeSpan.FromSeconds(3));
+            if (!manual) await Task.Delay(TimeSpan.FromSeconds(3));
             var current = typeof(App).Assembly.GetName().Version ?? new Version(0, 1, 0);
-            var outcome = await UpdateChecker.CheckLatestAsync(UpdateHttpClient, current, settings.LastSkippedUpdateTag);
-            if (outcome is null) return;
-            if (outcome.Availability != UpdateAvailability.NewVersionAvailable) return;
-
-            await Dispatcher.InvokeAsync(() =>
+            var skippedTag = manual ? null : settings.LastSkippedUpdateTag;
+            var outcome = await UpdateChecker.CheckLatestAsync(UpdateHttpClient, current, skippedTag);
+            if (outcome is null)
             {
-                viewModel.SetUpdateAvailable(outcome.LatestTag, outcome.ReleaseHtmlUrl);
-                var dialog = new UpdateWindow(viewModel.VersionText, outcome.LatestTag) { Owner = owner };
-                dialog.ShowDialog();
-                switch (dialog.Choice)
-                {
-                    case UpdateChoice.DownloadNow:
-                        Process.Start(new ProcessStartInfo(outcome.ReleaseHtmlUrl) { UseShellExecute = true });
-                        break;
-                    case UpdateChoice.SkipVersion:
-                        settings.LastSkippedUpdateTag = outcome.LatestTag;
-                        store.Save(settings);
-                        break;
-                }
-            });
+                if (manual) viewModel.UpdateCheckStatus = "Could not check for updates. Try again later.";
+                return;
+            }
+            if (outcome.Availability != UpdateAvailability.NewVersionAvailable)
+            {
+                if (manual) viewModel.UpdateCheckStatus = "CatSit is up to date.";
+                return;
+            }
+
+            viewModel.SetUpdateAvailable(outcome.LatestTag, outcome.ReleaseHtmlUrl);
+            viewModel.UpdateCheckStatus = $"Update {outcome.LatestTag} is available.";
+            if (!showDialog)
+            {
+                _tray?.Notify("CatSit update available", $"Version {outcome.LatestTag} is ready to download.");
+                return;
+            }
+
+            var dialog = new UpdateWindow(viewModel.VersionText, outcome.LatestTag) { Owner = owner };
+            dialog.ShowDialog();
+            switch (dialog.Choice)
+            {
+                case UpdateChoice.DownloadNow:
+                    Process.Start(new ProcessStartInfo(outcome.ReleaseHtmlUrl) { UseShellExecute = true });
+                    break;
+                case UpdateChoice.SkipVersion:
+                    settings.LastSkippedUpdateTag = outcome.LatestTag;
+                    viewModel.ReportPersistence(store.Save(settings), () => store.Save(settings));
+                    break;
+            }
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException or InvalidOperationException)
         {
+            if (manual) viewModel.UpdateCheckStatus = "Could not check for updates. Try again later.";
+        }
+        finally
+        {
+            _updateCheckInProgress = false;
+            viewModel.IsCheckingForUpdates = false;
         }
     }
 
@@ -205,10 +259,10 @@ public partial class App : Application
 
     private void StartShowEventListener()
     {
-        _showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ShowEventName);
+        var showEvent = _showEvent ??= new EventWaitHandle(false, EventResetMode.AutoReset, ShowEventName);
         var listener = new Thread(() =>
         {
-            while (_showEvent.WaitOne())
+            while (showEvent.WaitOne())
             {
                 Dispatcher.BeginInvoke(() => (MainWindow as MainWindow)?.ShowFromTray());
             }
@@ -222,13 +276,18 @@ public partial class App : Application
 
     private static void SignalExistingInstance()
     {
-        try
+        for (var attempt = 0; attempt < 20; attempt++)
         {
-            using var showEvent = EventWaitHandle.OpenExisting(ShowEventName);
-            showEvent.Set();
-        }
-        catch (WaitHandleCannotBeOpenedException)
-        {
+            try
+            {
+                using var showEvent = EventWaitHandle.OpenExisting(ShowEventName);
+                showEvent.Set();
+                return;
+            }
+            catch (WaitHandleCannotBeOpenedException)
+            {
+                Thread.Sleep(100);
+            }
         }
     }
 }

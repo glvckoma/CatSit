@@ -22,6 +22,8 @@ public static class StartupRegistration
         }
     }
 
+    public static string BuildCommand(string executablePath) => $"\"{executablePath}\" --background";
+
     public static void Apply(bool enabled)
     {
         try
@@ -32,7 +34,7 @@ public static class StartupRegistration
             {
                 var path = Environment.ProcessPath;
                 if (string.IsNullOrWhiteSpace(path)) return;
-                key.SetValue(ValueName, $"\"{path}\"");
+                key.SetValue(ValueName, BuildCommand(path));
             }
             else
             {
@@ -46,6 +48,24 @@ public static class StartupRegistration
 
     public static void Sync(bool desired)
     {
-        if (IsEnabled() != desired) Apply(desired);
+        if (!desired)
+        {
+            if (IsEnabled()) Apply(false);
+            return;
+        }
+
+        var path = Environment.ProcessPath;
+        if (string.IsNullOrWhiteSpace(path)) return;
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(RunKeyPath);
+            if (!string.Equals(key?.GetValue(ValueName) as string, BuildCommand(path), StringComparison.OrdinalIgnoreCase))
+            {
+                Apply(true);
+            }
+        }
+        catch (Exception exception) when (exception is SecurityException or UnauthorizedAccessException or IOException)
+        {
+        }
     }
 }

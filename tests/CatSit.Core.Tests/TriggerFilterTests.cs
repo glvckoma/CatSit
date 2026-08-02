@@ -54,38 +54,52 @@ public class TriggerFilterTests
     }
 
     [Fact]
-    public void ShouldFire_TrueForNewSignal()
+    public void Evaluate_FiresForNewSignal()
     {
-        Assert.True(Filter().ShouldFire(HeldKeys()));
+        Assert.Equal(TriggerDecision.Fire, Filter().Evaluate(HeldKeys()));
     }
 
     [Fact]
-    public void ShouldFire_FalseForExcludedSignature()
+    public void Evaluate_ReturnsExactExclusionForExcludedSignature()
     {
         var exclusions = new ExclusionList();
         exclusions.Add(HeldKeys().Signature);
-        Assert.False(Filter(exclusions).ShouldFire(HeldKeys()));
+        Assert.Equal(TriggerDecision.ExactExclusion, Filter(exclusions).Evaluate(HeldKeys()));
     }
 
     [Fact]
-    public void ShouldFire_FalseWhenClassifierSuppresses()
+    public void Evaluate_ReturnsLearnedSuppressionWhenClassifierSuppresses()
     {
         var classifier = new CatClassifier();
         var features = new DetectionFeatures { HeldKeyCount = 2, MaxHoldMs = 2600, HeldAdjacentPairs = 1 };
         for (var i = 0; i < 6; i++) classifier.Learn(features, isCat: false);
+        classifier.Learn(new DetectionFeatures { HeldKeyCount = 6 }, isCat: true);
+        classifier.Learn(new DetectionFeatures { HeldKeyCount = 7 }, isCat: true);
         var signal = new CatSignal(CatRule.SustainedHold, [0x57, 0x44], features);
-        Assert.False(Filter(classifier: classifier).ShouldFire(signal));
+        Assert.Equal(TriggerDecision.LearnedSuppression, Filter(classifier: classifier).Evaluate(signal));
     }
 
     [Fact]
-    public void ShouldFire_IgnoresClassifierWhenLearningDisabled()
+    public void Evaluate_IgnoresClassifierWhenLearningDisabled()
     {
         var classifier = new CatClassifier();
         var features = new DetectionFeatures { HeldKeyCount = 2, MaxHoldMs = 2600, HeldAdjacentPairs = 1 };
         for (var i = 0; i < 6; i++) classifier.Learn(features, isCat: false);
+        classifier.Learn(new DetectionFeatures { HeldKeyCount = 6 }, isCat: true);
+        classifier.Learn(new DetectionFeatures { HeldKeyCount = 7 }, isCat: true);
         var filter = Filter(classifier: classifier);
         filter.LearningEnabled = false;
-        Assert.True(filter.ShouldFire(new CatSignal(CatRule.SustainedHold, [0x57, 0x44], features)));
+        Assert.Equal(TriggerDecision.Fire,
+            filter.Evaluate(new CatSignal(CatRule.SustainedHold, [0x57, 0x44], features)));
+    }
+
+    [Fact]
+    public void AfterSuppression_InputIsIgnoredForGracePeriodThenResumes()
+    {
+        var filter = Filter();
+        filter.NotifySuppressed(10_000);
+        Assert.False(filter.AcceptsInput(11_000));
+        Assert.True(filter.AcceptsInput(10_000 + TriggerFilter.UnlockGraceMs));
     }
 
     [Fact]
@@ -98,6 +112,6 @@ public class TriggerFilterTests
         Assert.True(filter.AcceptsInput(2000));
         var signal = detector.Poll(2000);
         Assert.NotNull(signal);
-        Assert.True(filter.ShouldFire(signal));
+        Assert.Equal(TriggerDecision.Fire, filter.Evaluate(signal));
     }
 }

@@ -11,6 +11,8 @@ public class AppSettingsTests
         Assert.True(s.LockKeyboard);
         Assert.False(s.LockMouse);
         Assert.True(s.DetectionEnabled);
+        Assert.True(s.DetectKeyboardInput);
+        Assert.True(s.DetectMouseInput);
         Assert.Equal(5, s.Sensitivity);
         Assert.Equal(10, s.SecondsUntilSleep);
         Assert.True(s.SoundsEnabled);
@@ -80,6 +82,13 @@ public class SettingsSerializerTests
         Assert.True(restored.LockKeyboard);
         Assert.Equal(5, restored.Sensitivity);
         Assert.Equal(0x4C, restored.ToggleHotkey.Vk);
+    }
+
+    [Fact]
+    public void TryFromJson_ReportsInvalidJson()
+    {
+        Assert.False(SettingsSerializer.TryFromJson("not json", out var restored));
+        Assert.True(restored.LockKeyboard);
     }
 
     [Fact]
@@ -153,6 +162,38 @@ public class SettingsSerializerTests
         Assert.Equal(8, restored.CatScale);
         Assert.Equal(0, restored.AutoUnlockMinutes);
         Assert.True(restored.LockKeyboard);
+    }
+
+    [Fact]
+    public void FromJson_KeepsAtLeastOneDetectionSourceWhenDetectionIsEnabled()
+    {
+        var restored = SettingsSerializer.FromJson(
+            "{\"DetectionEnabled\":true,\"DetectKeyboardInput\":false,\"DetectMouseInput\":false}");
+        Assert.True(restored.DetectKeyboardInput);
+        Assert.False(restored.DetectMouseInput);
+    }
+
+    [Fact]
+    public void RestoreDefaults_PreservesIgnoredCombinations()
+    {
+        var settings = new AppSettings
+        {
+            LockKeyboard = false,
+            LockMouse = true,
+            DetectKeyboardInput = false,
+            DetectMouseInput = true,
+            StartWithWindows = true,
+            Volume = 10,
+            ExcludedSignatures = ["A+S"]
+        };
+        settings.RestoreDefaults();
+        Assert.True(settings.LockKeyboard);
+        Assert.False(settings.LockMouse);
+        Assert.True(settings.DetectKeyboardInput);
+        Assert.True(settings.DetectMouseInput);
+        Assert.False(settings.StartWithWindows);
+        Assert.Equal(70, settings.Volume);
+        Assert.Equal(["A+S"], settings.ExcludedSignatures);
     }
 
     [Fact]

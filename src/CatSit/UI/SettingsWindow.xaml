@@ -86,10 +86,33 @@
                         </StackPanel>
                     </ListBoxItem>
                 </ListBox>
+                <TextBlock Text="Changes save automatically."
+                           Style="{StaticResource Caption}"
+                           Margin="8,18,4,0"
+                           TextWrapping="Wrap" />
             </StackPanel>
         </Border>
 
         <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" Padding="26,22,26,22">
+            <StackPanel>
+            <Border Background="{StaticResource DangerSoft}"
+                    BorderBrush="{StaticResource Danger}"
+                    BorderThickness="1"
+                    CornerRadius="9"
+                    Padding="12,10"
+                    Margin="0,0,0,16"
+                    Visibility="{Binding PersistenceErrorVisibility}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding PersistenceErrorText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Content="Retry" Style="{StaticResource GhostButton}"
+                            Margin="12,0,0,0" Command="{Binding RetryPersistenceCommand}"
+                            Visibility="{Binding PersistenceRetryVisibility}" />
+                </Grid>
+            </Border>
             <Grid>
                 <StackPanel x:Name="GeneralPanel">
                     <TextBlock Text="What gets locked" Style="{StaticResource SectionTitle}" />
@@ -132,6 +155,16 @@
                         <TextBlock Text=" · " Style="{StaticResource Caption}" VerticalAlignment="Center" />
                         <Button Content="Made by glvckoma" Style="{StaticResource GhostButton}" Click="OnCreditClicked" />
                     </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                        <Button Content="Check for updates" Style="{StaticResource GhostButton}"
+                                IsEnabled="{Binding CanCheckForUpdates}" Click="OnCheckForUpdates" />
+                        <Button Content="Restore default settings" Style="{StaticResource GhostButton}"
+                                Margin="8,0,0,0" Click="OnRestoreDefaults" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding UpdateCheckStatus}"
+                               Style="{StaticResource Caption}"
+                               Visibility="{Binding UpdateCheckStatusVisibility}"
+                               Margin="0,8,0,0" />
                     <TextBlock Text="{Binding UpdateAvailableText}"
                                Style="{StaticResource Caption}" Foreground="{StaticResource Accent}"
                                Visibility="{Binding UpdateAvailableVisibility}" Cursor="Hand"
@@ -141,6 +174,10 @@
                 <StackPanel x:Name="DetectionPanel" Visibility="Collapsed">
                     <TextBlock Text="Cat detection" Style="{StaticResource SectionTitle}" />
                     <CheckBox Content="Detect cats automatically" IsChecked="{Binding DetectionEnabled}" />
+                    <StackPanel Margin="18,2,0,8" IsEnabled="{Binding DetectionEnabled}">
+                        <CheckBox Content="Watch keyboard patterns" IsChecked="{Binding DetectKeyboardInput}" />
+                        <CheckBox Content="Watch mouse clicks" IsChecked="{Binding DetectMouseInput}" />
+                    </StackPanel>
                     <CheckBox Content="Warn only, do not lock" IsChecked="{Binding WarnOnly}" />
                     <CheckBox Content="Pause detection while a fullscreen app is active" IsChecked="{Binding PauseInFullscreen}" />
                     <CheckBox Content="Learn from my feedback" IsChecked="{Binding LearningEnabled}" />
@@ -244,9 +281,13 @@
                 <StackPanel x:Name="ActivityPanel" Visibility="Collapsed">
                     <Grid Margin="0,0,0,10">
                         <TextBlock Text="Recent triggers" Style="{StaticResource SectionTitle}" VerticalAlignment="Center" />
-                        <Button Content="Clear history" Style="{StaticResource GhostButton}" HorizontalAlignment="Right" VerticalAlignment="Top" Click="OnClearActivity" />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+                            <Button Content="Clear history" Style="{StaticResource GhostButton}" Click="OnClearActivity" />
+                            <Button Content="Reset learned behavior" Style="{StaticResource GhostButton}"
+                                    Margin="8,0,0,0" Click="OnResetLearning" />
+                        </StackPanel>
                     </Grid>
-                    <TextBlock Text="Mark anything that was not your cat and CatSit will stop triggering on that key combination."
+                    <TextBlock Text="Review or change any verdict. Exact ignored combinations apply immediately, and broader learning activates after enough mixed feedback."
                                Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,14" />
 
                     <ItemsControl ItemsSource="{Binding Triggers}">
@@ -254,27 +295,26 @@
                             <DataTemplate>
                                 <Border Style="{StaticResource CardBorder}" Padding="14,12" Margin="0,0,0,8">
                                     <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Headline}" FontSize="13" FontWeight="SemiBold" />
-                                            <TextBlock Text="{Binding Detail}" Style="{StaticResource Caption}" Margin="0,3,0,0" />
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding VerdictText}"
-                                                       Style="{StaticResource Caption}"
-                                                       VerticalAlignment="Center"
-                                                       Margin="0,0,10,0"
-                                                       Visibility="{Binding VerdictVisibility}" />
-                                            <Button Content="Was a cat" Style="{StaticResource GhostButton}"
-                                                    Visibility="{Binding ButtonsVisibility}"
-                                                    Command="{Binding ConfirmCommand}" />
-                                            <Button Content="Not a cat" Style="{StaticResource GhostButton}" Margin="8,0,0,0"
-                                                    Visibility="{Binding ButtonsVisibility}"
-                                                    Command="{Binding RejectCommand}" />
-                                        </StackPanel>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Text="{Binding Headline}" FontSize="13" FontWeight="SemiBold"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <Grid Grid.Row="1" Margin="0,8,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding Detail}" Style="{StaticResource Caption}" VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                <Button Content="{Binding ConfirmButtonText}" Style="{StaticResource GhostButton}"
+                                                        Margin="12,0,0,0" Command="{Binding ConfirmCommand}" />
+                                                <Button Content="{Binding RejectButtonText}" Style="{StaticResource GhostButton}" Margin="8,0,0,0"
+                                                        Command="{Binding RejectCommand}" />
+                                            </StackPanel>
+                                        </Grid>
                                     </Grid>
                                 </Border>
                             </DataTemplate>
@@ -314,6 +354,7 @@
                                Visibility="{Binding EmptyExclusionsVisibility}" />
                 </StackPanel>
             </Grid>
+            </StackPanel>
         </ScrollViewer>
     </Grid>
     </DockPanel>

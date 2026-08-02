@@ -77,6 +77,16 @@ public partial class OverlayWindow : Window
         }
     }
 
+    public bool ContainsCatScreenPoint(int x, int y)
+    {
+        if (!IsVisible || _animator.State is CatState.Hidden) return false;
+        var point = PointFromScreen(new Point(x, y));
+        var left = Canvas.GetLeft(CatImage);
+        var top = Canvas.GetTop(CatImage);
+        return point.X >= left && point.X <= left + CatImage.ActualWidth
+            && point.Y >= top && point.Y <= top + CatImage.ActualHeight;
+    }
+
     private void ApplyAppearance()
     {
         CatImage.Width = SpriteWidth * _settings.CatScale;

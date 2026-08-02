@@ -69,6 +69,12 @@ public sealed class LockController
         _hooks.ToggleHotkey = _settings.ToggleHotkey;
         _hooks.HotkeyLocksKeyboard = _settings.LockKeyboard && !_settings.WarnOnly;
         _hooks.HotkeyLocksMouse = _settings.LockMouse && !_settings.WarnOnly && !Debugger.IsAttached;
+        _hooks.AllowMouseMovementWhileBlocked = _settings.ClickToDismiss;
+        if (IsLocked)
+        {
+            _hooks.BlockKeyboard = _settings.LockKeyboard && !_settings.WarnOnly;
+            _hooks.BlockMouse = _settings.LockMouse && !_settings.WarnOnly && !Debugger.IsAttached;
+        }
         var profile = SensitivityProfile.FromLevel(_settings.Sensitivity);
         _keyboardDetector = new KeyboardCatDetector(profile);
         _mouseDetector = new MouseCatDetector(profile);
@@ -109,27 +115,32 @@ public sealed class LockController
             _exclusions.Add(record.Signature);
             _settings.ExcludedSignatures = [.. _exclusions.Signatures];
         }
-        if (_settings.LearningEnabled)
+        else if (verdict == TriggerVerdict.ConfirmedCat && !string.IsNullOrEmpty(record.Signature)
+            && !_log.Entries.Any(entry => entry.Id != record.Id
+                && entry.Signature == record.Signature
+                && entry.Verdict == TriggerVerdict.FalseAlarm))
         {
-            _classifier.Learn(record.Features, verdict == TriggerVerdict.ConfirmedCat);
+            _exclusions.Remove(record.Signature);
+            _settings.ExcludedSignatures = [.. _exclusions.Signatures];
         }
+        _classifier.SetLabel(record.Id, record.Features, verdict == TriggerVerdict.ConfirmedCat);
     }
 
     private void OnKeyEvent(KeyEventInfo e)
     {
-        if (!Accepting()) return;
+        if (!_settings.DetectKeyboardInput || !Accepting()) return;
         Handle(_keyboardDetector.Observe(e));
     }
 
     private void OnMouseEvent(MouseEventInfo e)
     {
-        if (!Accepting()) return;
+        if (!_settings.DetectMouseInput || !Accepting()) return;
         Handle(_mouseDetector.Observe(e));
     }
 
     private void PollHold()
     {
-        if (!Accepting()) return;
+        if (!_settings.DetectKeyboardInput || !Accepting()) return;
         Handle(_keyboardDetector.Poll(Environment.TickCount64));
     }
 
@@ -141,7 +152,23 @@ public sealed class LockController
 
     private void Handle(CatSignal? signal)
     {
-        if (signal is null || !_filter.ShouldFire(signal)) return;
+        if (signal is null) return;
+        var decision = _filter.Evaluate(signal);
+        if (decision == TriggerDecision.ExactExclusion) return;
+        if (decision == TriggerDecision.LearnedSuppression)
+        {
+            var suppressed = _log.Add(
+                signal,
+                locked: false,
+                DateTimeOffset.UtcNow,
+                Guid.NewGuid().ToString("N"),
+                suppressedByLearning: true);
+            _keyboardDetector.Reset();
+            _mouseDetector.Reset();
+            _filter.NotifySuppressed(Environment.TickCount64);
+            TriggerRecorded?.Invoke(suppressed);
+            return;
+        }
         var shouldLock = !_settings.WarnOnly;
         var record = _log.Add(signal, shouldLock, DateTimeOffset.UtcNow, Guid.NewGuid().ToString("N"));
         _audio.PlayDeterrent();

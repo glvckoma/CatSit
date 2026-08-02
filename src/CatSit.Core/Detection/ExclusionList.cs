@@ -13,6 +13,8 @@ public sealed class ExclusionList
 
     public void Remove(string signature) => _signatures.Remove(signature);
 
+    public void Clear() => _signatures.Clear();
+
     public bool IsExcluded(CatSignal signal) => _signatures.Contains(signal.Signature);
 
     public void Load(IEnumerable<string> signatures)

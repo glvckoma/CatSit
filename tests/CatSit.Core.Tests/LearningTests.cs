@@ -85,6 +85,26 @@ public class TriggerLogTests
         log.Clear();
         Assert.Empty(log.Entries);
     }
+
+    [Fact]
+    public void ResetVerdicts_KeepsHistoryAndMarksEntriesUnreviewed()
+    {
+        var log = new TriggerLog();
+        log.Add(Signal(), true, Start, "id-1");
+        log.SetVerdict("id-1", TriggerVerdict.ConfirmedCat);
+        log.ResetVerdicts();
+        Assert.Single(log.Entries);
+        Assert.Equal(TriggerVerdict.Unreviewed, log.Entries[0].Verdict);
+    }
+
+    [Fact]
+    public void Add_CanIdentifyLearnedSuppression()
+    {
+        var log = new TriggerLog();
+        var record = log.Add(Signal(), false, Start, "id-1", suppressedByLearning: true);
+        Assert.True(record.SuppressedByLearning);
+        Assert.False(record.Locked);
+    }
 }
 
 public class CatClassifierTests
@@ -134,15 +154,25 @@ public class CatClassifierTests
     }
 
     [Fact]
-    public void BecomesActiveAfterMinimumSamples()
+    public void BecomesActiveAfterSixMixedSamples()
     {
         var classifier = new CatClassifier();
-        for (var i = 0; i < CatClassifier.MinSamplesBeforeVeto; i++)
-        {
-            classifier.Learn(HumanLike(), isCat: false);
-        }
+        for (var i = 0; i < 4; i++) classifier.Learn(HumanLike(), isCat: false);
+        classifier.Learn(CatLike(), isCat: true);
+        Assert.False(classifier.IsActive);
+        classifier.Learn(CatLike(), isCat: true);
         Assert.True(classifier.IsActive);
         Assert.Equal(CatClassifier.MinSamplesBeforeVeto, classifier.SampleCount);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void OneSidedHistory_NeverActivates(bool isCat)
+    {
+        var classifier = new CatClassifier();
+        for (var i = 0; i < 20; i++) classifier.Learn(isCat ? CatLike() : HumanLike(), isCat);
+        Assert.False(classifier.IsActive);
     }
 
     [Fact]
@@ -159,6 +189,8 @@ public class CatClassifierTests
     {
         var classifier = new CatClassifier();
         for (var i = 0; i < 6; i++) classifier.Learn(HumanLike(), isCat: false);
+        classifier.Learn(CatLike(), isCat: true);
+        classifier.Learn(CatLike(), isCat: true);
         Assert.True(classifier.ShouldSuppress(HumanLike()));
     }
 
@@ -201,23 +233,55 @@ public class CatClassifierTests
     }
 
     [Fact]
-    public void Load_RestoresPersistedStateAndScores()
+    public void LoadSamples_RebuildsPersistedStateAndScores()
     {
         var original = new CatClassifier();
         for (var i = 0; i < 5; i++) original.Learn(HumanLike(), false);
         var restored = new CatClassifier();
-        restored.Load(original.Weights, original.Bias, original.Samples);
+        restored.LoadSamples(original.Samples);
         Assert.Equal(original.Score(HumanLike()), restored.Score(HumanLike()), 10);
         Assert.Equal(original.SampleCount, restored.SampleCount);
     }
 
     [Fact]
-    public void Load_WithWrongWeightCount_KeepsDefaults()
+    public void LoadSamples_DropsInvalidSamplesAndDuplicateIds()
     {
         var classifier = new CatClassifier();
-        var expected = classifier.Score(CatLike());
-        classifier.Load([1.0, 2.0], 5.0, []);
-        Assert.Equal(expected, classifier.Score(CatLike()), 10);
+        classifier.LoadSamples([
+            new LabeledSample { Id = "valid", Features = HumanLike().ToVector(), IsCat = false },
+            new LabeledSample { Id = "invalid", Features = [1.0, 2.0], IsCat = true },
+            new LabeledSample { Id = "non-finite", Features = [double.NaN, 0, 0, 0, 0, 0, 0, 0], IsCat = false },
+            new LabeledSample { Id = "valid", Features = CatLike().ToVector(), IsCat = true }
+        ]);
+        Assert.Single(classifier.Samples);
+        Assert.True(classifier.Samples[0].IsCat);
+    }
+
+    [Fact]
+    public void SetLabel_ReplacesExistingSampleAndRemoveLabelRetrains()
+    {
+        var classifier = new CatClassifier();
+        classifier.SetLabel("trigger", HumanLike(), false);
+        classifier.SetLabel("trigger", CatLike(), true);
+        Assert.Single(classifier.Samples);
+        Assert.True(classifier.Samples[0].IsCat);
+        Assert.True(classifier.RemoveLabel("trigger"));
+        Assert.Empty(classifier.Samples);
+        Assert.False(classifier.RemoveLabel("missing"));
+    }
+
+    [Fact]
+    public void RepresentativeHistory_PreservesCatsAndSuppressesMouseFalseAlarms()
+    {
+        var classifier = new CatClassifier();
+        for (var i = 0; i < 9; i++) classifier.SetLabel($"cat-{i}", CatLike(), true);
+        classifier.SetLabel("rapid-click", new DetectionFeatures { ClicksPerSecond = 6 }, false);
+        classifier.SetLabel("both-1", new DetectionFeatures { ClicksPerSecond = 1, BothButtonsHeld = true }, false);
+        classifier.SetLabel("both-2", new DetectionFeatures { ClicksPerSecond = 1, BothButtonsHeld = true }, false);
+        Assert.True(classifier.IsActive);
+        Assert.False(classifier.ShouldSuppress(CatLike()));
+        Assert.True(classifier.ShouldSuppress(new DetectionFeatures { ClicksPerSecond = 6 }));
+        Assert.True(classifier.ShouldSuppress(new DetectionFeatures { ClicksPerSecond = 1, BothButtonsHeld = true }));
     }
 
     [Fact]
